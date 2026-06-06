@@ -70,10 +70,12 @@ M.render = function(buf, results, win)
   local hls       = require("vallow.panel.highlights")
 
   -- ── Build ordered sections ──────────────────────────────────────────
-  local sections = M._build_sections(cfg)
-  local total_issues = 0
+  local sections        = M._build_sections(cfg)
+  local current_section = require("vallow.panel").state.current_section
+  local total_issues    = 0
 
   for _, sec in ipairs(sections) do
+    if current_section and sec.key ~= current_section then goto next_sec end
     -- Sum counts for this section (filtered if query active)
     local sec_total = 0
     for _, cat in ipairs(sec.cats) do

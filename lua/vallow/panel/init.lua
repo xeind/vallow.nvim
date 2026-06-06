@@ -1,9 +1,10 @@
 local M = {}
 
 M.state = {
-  buf     = nil,
-  win     = nil,
-  results = nil,
+  buf             = nil,
+  win             = nil,
+  results         = nil,
+  current_section = nil,  -- nil = ALL tabs visible
 }
 
 M.open = function()
@@ -65,11 +66,15 @@ M.refresh = function()
 
   -- Show loading state immediately
   render.render(M.state.buf, { _loading = true }, M.state.win)
+  require("vallow.panel.tabs").set_winbar(
+    M.state.win, M.state.current_section, nil, require("vallow.config").get())
 
   require("vallow.runner").run(function(results)
     M.state.results = results
     if M._is_open() then
       render.render(M.state.buf, results, M.state.win)
+      require("vallow.panel.tabs").set_winbar(
+        M.state.win, M.state.current_section, results, require("vallow.config").get())
     end
     -- Push findings as inline diagnostics to open buffers
     require("vallow.diagnostics").apply(results.findings)

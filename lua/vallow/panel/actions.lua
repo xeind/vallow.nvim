@@ -10,6 +10,8 @@ M.setup = function(buf)
 
   map(cfg.close,        function() panel.close() end)
   map(cfg.refresh,      function() panel.refresh() end)
+  map(cfg.next_tab,     function() M.switch_tab(buf, 1)  end)
+  map(cfg.prev_tab,     function() M.switch_tab(buf, -1) end)
   map(cfg.toggle_fold,  function() M.toggle_fold(buf) end)
   map(cfg.next_section, function() M.move_section(buf, 1) end)
   map(cfg.prev_section, function() M.move_section(buf, -1) end)
@@ -133,6 +135,25 @@ M.set_all_folds = function(buf, open)
   if panel.state.results then
     require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
   end
+end
+
+-- ── Tab switching ─────────────────────────────────────────────────────
+
+M.switch_tab = function(buf, direction)
+  local panel = require("vallow.panel")
+  local tabs  = require("vallow.panel.tabs")
+  local cur   = panel.state.current_section
+
+  panel.state.current_section = direction > 0 and tabs.next(cur) or tabs.prev(cur)
+
+  if panel.state.results then
+    require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
+    tabs.set_winbar(panel.state.win, panel.state.current_section,
+      panel.state.results, require("vallow.config").get())
+  end
+
+  -- Reset cursor to top of content
+  pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
 end
 
 M.move_section = function(buf, direction)

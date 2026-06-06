@@ -69,7 +69,7 @@ fallow dead-code --format json | head -5
   "xeind/vallow.nvim",
   cmd = { "Vallow", "VallowRefresh", "VallowSearch" },
   keys = {
-    { "<leader>va", "<cmd>Vallow<cr>",        desc = "Vallow: toggle" },
+    { "<leader>V",  "<cmd>Vallow<cr>",        desc = "Vallow: toggle" },
     { "<leader>vr", "<cmd>VallowRefresh<cr>", desc = "Vallow: refresh" },
     { "<leader>vs", "<cmd>VallowSearch<cr>",  desc = "Vallow: search findings" },
   },
@@ -117,6 +117,7 @@ Press `<CR>` on any issue to jump directly to the file and line.
 
 | Key | Action |
 |---|---|
+| `L` / `H` | Next / previous tab (cycle sections) |
 | `<CR>` | Jump to the issue (current window) |
 | `o` | Jump in a horizontal split |
 | `v` | Jump in a vertical split |
@@ -190,6 +191,8 @@ require("vallow").setup({
     jump         = "<CR>",
     refresh      = "r",
     toggle_fold  = "<Tab>",
+    next_tab     = "L",
+    prev_tab     = "H",
     next_section = "]c",
     prev_section = "[c",
     filter       = "f",

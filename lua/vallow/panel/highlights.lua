@@ -15,6 +15,10 @@ local groups = {
   VallowSevError = { link = "DiagnosticError" },
   VallowSevWarn  = { link = "DiagnosticWarn"  },
   VallowSevHint  = { link = "DiagnosticHint"  },
+  -- Tab strip
+  VallowTabActive   = { link = "TabLineSel"  },
+  VallowTabInactive = { link = "TabLine"     },
+  VallowTabSep      = { link = "TabLineFill" },
 }
 
 M.setup = function()
