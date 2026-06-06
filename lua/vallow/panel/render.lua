@@ -74,25 +74,6 @@ M.render = function(buf, results, win)
   local current_section = require("vallow.panel").state.current_section
   local total_issues    = 0
 
-  -- ── Summary row (pre-pass counts) ───────────────────────────────────
-  local SHORT = { unused_code = "unused", issues = "issues",
-                  duplicates = "dupes", health = "health", architecture = "arch" }
-  local summary_parts = {}
-  for _, sec in ipairs(sections) do
-    if current_section and sec.key ~= current_section then goto skip_sum end
-    local tot = 0
-    for _, cat in ipairs(sec.cats) do
-      local d = M._resolve_findings(cat.key, cat.cfg, results.findings)
-      if d then tot = tot + d.count end
-    end
-    if tot > 0 then
-      table.insert(summary_parts, tot .. " " .. (SHORT[sec.key] or sec.key))
-    end
-    ::skip_sum::
-  end
-  if #summary_parts > 0 then
-    push("  " .. table.concat(summary_parts, "  ·  "), 2, -1, "VallowFooter")
-  end
 
   for _, sec in ipairs(sections) do
     if current_section and sec.key ~= current_section then goto next_sec end
