@@ -101,12 +101,12 @@ M.render = function(buf, results, win)
     -- Section header row
     local fold     = sec_open and "▼" or "▶"
     local sec_lbl  = string.format("  %s %s", fold, sec.cfg.label)
-    local cnt_str  = sec_total > 0 and tostring(sec_total) or ""
-    local sec_line = cnt_str ~= "" and labeled_row(sec_lbl, cnt_str) or sec_lbl
+    local cnt_str  = sec_total > 0 and ("  " .. tostring(sec_total)) or ""
+    local sec_line = sec_lbl .. cnt_str
     push(sec_line, 2, #sec_lbl, "VallowSection",
       { _type = "section", key = sec.key })
     if cnt_str ~= "" then
-      hl_last(#sec_line - #cnt_str, #sec_line, "VallowCount")
+      hl_last(#sec_lbl, #sec_line, "VallowCount")
     end
 
     if not sec_open then goto next_sec end
@@ -140,10 +140,10 @@ M.render = function(buf, results, win)
         and (tostring(#items) .. "/" .. tostring(d.count))
         or  tostring(d.count)
       local cat_lbl  = string.format("    %s %s %s", cat_fold, cat.cfg.icon, cat.cfg.label)
-      local cat_line = labeled_row(cat_lbl, cat_cnt)
+      local cat_line = cat_lbl .. "  " .. cat_cnt
       push(cat_line, 4, #cat_lbl, sev_hl,
         { _type = "header", key = cat.key })
-      hl_last(#cat_line - #cat_cnt, #cat_line, sev_hl)
+      hl_last(#cat_lbl, #cat_line, sev_hl)
 
       if cat_open then
         local max   = cfg.max_items or 30
