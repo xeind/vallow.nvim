@@ -1,0 +1,7 @@
+*.log
+/.repro
+/.tests
+/build
+/debug
+/doc/tags
+node_modules
