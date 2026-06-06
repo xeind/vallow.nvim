@@ -41,21 +41,35 @@ sub-second static analysis engine for JS/TS.
 vallow.nvim is a UI wrapper — fallow does the actual analysis. Install it once:
 
 ```sh
-# npm — recommended
+# npm (global) — recommended
 npm install -g fallow
 
-# local to your project
+# npm (local to your project)
 npm install --save-dev fallow
 
-# cargo
+# pnpm
+pnpm add -g fallow
+
+# bun
+bun add -g fallow
+
+# Cargo
 cargo install fallow
+```
+
+If installed locally, point vallow at the local binary:
+
+```lua
+require("vallow").setup({
+  fallow_cmd = "./node_modules/.bin/fallow",
+})
 ```
 
 Verify it works:
 
 ```sh
 fallow --version
-fallow dead-code --format json | head -5
+fallow --format json --quiet | head -20
 ```
 
 ---
