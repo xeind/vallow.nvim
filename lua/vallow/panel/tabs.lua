@@ -55,7 +55,7 @@ M.set_winbar = function(win, current_section, results, cfg)
     table.insert(parts, tab(text, hl))
   end
 
-  vim.wo[win].winbar = table.concat(parts, sep)
+  vim.api.nvim_set_option_value("winbar", table.concat(parts, sep), { win = win })
 end
 
 -- Returns the next section key (nil = ALL)
