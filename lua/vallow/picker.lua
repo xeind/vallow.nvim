@@ -146,6 +146,28 @@ local function open_fzf(entries)
   })
 end
 
+-- ── Snacks ───────────────────────────────────────────────────────────
+local function open_snacks(entries)
+  local items = {}
+  for _, e in ipairs(entries) do
+    table.insert(items, {
+      text = e.display,
+      file = e.path,
+      pos  = { e.lnum or 1, (e.col or 0) + 1 },
+      _e   = e,
+    })
+  end
+  require("snacks").picker.pick({
+    title   = "Vallow Findings",
+    items   = items,
+    preview = "file",
+    confirm = function(picker, item)
+      picker:close()
+      if item then jump(item._e) end
+    end,
+  })
+end
+
 -- ── vim.ui.select fallback ───────────────────────────────────────────
 local function open_select(entries)
   vim.ui.select(entries, {
@@ -164,7 +186,10 @@ M.open = function(results)
     return
   end
 
-  if pcall(require, "telescope") then
+  local ok_snacks, snacks = pcall(require, "snacks")
+  if ok_snacks and snacks.picker then
+    open_snacks(entries)
+  elseif pcall(require, "telescope") then
     open_telescope(entries)
   elseif pcall(require, "fzf-lua") then
     open_fzf(entries)
