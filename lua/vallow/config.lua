@@ -127,7 +127,7 @@ end
 
 function M.get()
   if next(M.options) == nil then
-    return M.defaults
+    return vim.deepcopy(M.defaults)
   end
   return M.options
 end

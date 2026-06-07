@@ -504,7 +504,11 @@ M.peek = function(buf)
 
   -- Close on <Esc>, P, or any cursor movement in the panel
   for _, key in ipairs({ "<Esc>", "P" }) do
-    vim.keymap.set("n", key, close, { buffer = buf, once = true, nowait = true, silent = true })
+    local k = key
+    vim.keymap.set("n", k, function()
+      vim.keymap.del("n", k, { buffer = buf })
+      close()
+    end, { buffer = buf, nowait = true, silent = true })
   end
   vim.api.nvim_create_autocmd("CursorMoved", {
     buffer = buf,
@@ -598,24 +602,20 @@ end
 M.filter_current_buf = function(buf)
   local panel = require("vallow.panel")
 
-  -- Find the path of the most recent non-panel buffer
-  local target_path
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local wbuf = vim.api.nvim_win_get_buf(win)
-    if wbuf ~= buf and vim.bo[wbuf].filetype ~= "vallow" then
-      target_path = vim.api.nvim_buf_get_name(wbuf)
-      break
+  -- Use the relative_path of the item under cursor
+  local item = M._item_at_cursor(buf)
+  local rel = item and item.relative_path
+  if not rel or rel == "" then
+    -- Fallback: if cursor is on a section/header with no path, clear the filter
+    vim.b[buf].vallow_filter = ""
+    vim.notify("vallow: filter cleared", vim.log.levels.INFO)
+    if panel.state.results then
+      require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
     end
-  end
-  if not target_path or target_path == "" then
     return
   end
 
-  -- Strip repo root to get the relative path used in findings
-  local root = panel.state.results and panel.state.results.repo_root
-  local rel = root and target_path:gsub("^" .. vim.pesc(root) .. "/", "") or vim.fn.fnamemodify(target_path, ":.")
-
-  -- Toggle: if already filtering this file, clear it
+  -- Toggle: pressing % again on same file clears the filter
   if (vim.b[buf].vallow_filter or "") == rel then
     vim.b[buf].vallow_filter = ""
     vim.notify("vallow: filter cleared", vim.log.levels.INFO)

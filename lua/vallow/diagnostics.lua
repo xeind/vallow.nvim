@@ -4,6 +4,19 @@ local M = {}
 
 local ns = vim.api.nvim_create_namespace("vallow_diag")
 
+-- Finding categories that have per-line path+lnum info
+local LINE_CATS = {
+  "unused_exports",
+  "unused_types",
+  "unused_enum_members",
+  "unused_class_members",
+  "unresolved_imports",
+  "unlisted_deps",
+  "duplicate_exports",
+  "circular_deps",
+  "health_complexity",
+}
+
 -- Severity per finding category
 local SEVERITY = {
   unused_exports = vim.diagnostic.severity.HINT,
@@ -34,6 +47,13 @@ M.apply = function(findings)
     return
   end
 
+  -- Clear stale diagnostics from all loaded buffers before reapplying
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
+      vim.diagnostic.reset(ns, bufnr)
+    end
+  end
+
   -- Collect all diagnostics keyed by absolute path
   local diags_by_path = {}
 
@@ -54,18 +74,7 @@ M.apply = function(findings)
   end
 
   -- Per-line finding categories (have path + line)
-  local line_cats = {
-    "unused_exports",
-    "unused_types",
-    "unused_enum_members",
-    "unused_class_members",
-    "unresolved_imports",
-    "unlisted_deps",
-    "duplicate_exports",
-    "circular_deps",
-    "health_complexity",
-  }
-  for _, cat_key in ipairs(line_cats) do
+  for _, cat_key in ipairs(LINE_CATS) do
     local bucket = findings[cat_key]
     if bucket and bucket.count > 0 then
       local sev = SEVERITY[cat_key] or vim.diagnostic.severity.HINT
@@ -126,18 +135,7 @@ M.apply_buf = function(bufnr, findings)
 
   local diags = {}
 
-  local line_cats = {
-    "unused_exports",
-    "unused_types",
-    "unused_enum_members",
-    "unused_class_members",
-    "unresolved_imports",
-    "unlisted_deps",
-    "duplicate_exports",
-    "circular_deps",
-    "health_complexity",
-  }
-  for _, cat_key in ipairs(line_cats) do
+  for _, cat_key in ipairs(LINE_CATS) do
     local bucket = findings[cat_key]
     if bucket and bucket.count > 0 then
       local sev = SEVERITY[cat_key] or vim.diagnostic.severity.HINT

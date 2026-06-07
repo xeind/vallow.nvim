@@ -29,7 +29,7 @@ end
 
 M._open_split = function(cfg, buf)
   local pos = cfg.position or "bottom"
-  local size = cfg.size or 0.35
+  local size = math.max(0.1, math.min(0.9, cfg.size or 0.35))
 
   local split_cmd
   if pos == "bottom" then
@@ -44,6 +44,10 @@ M._open_split = function(cfg, buf)
   elseif pos == "left" then
     local width = math.floor(vim.o.columns * size)
     split_cmd = "topleft " .. width .. "vsplit"
+  else
+    -- Invalid position — fall back to bottom
+    local height = math.floor(vim.o.lines * size)
+    split_cmd = "botright " .. height .. "split"
   end
 
   vim.cmd(split_cmd)

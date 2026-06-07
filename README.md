@@ -97,11 +97,12 @@ All remappable via `setup({ keymaps = ... })`.
 | `<Tab>` / `za` | Toggle fold |
 | `zo` / `zc` | Open / close fold |
 | `zR` / `zM` | Open / close all folds |
+| `K` | Detail float: path, name, kind, fix suggestions |
 | `f` | Filter by path or name |
 | `F` | Clear filter |
+| `%` | Filter findings to the file under cursor |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
-| `%` | Filter to current buffer's file |
 | `Q` | Send to quickfix |
 | `y` | Yank path:line |
 | `r` | Refresh |
@@ -118,6 +119,7 @@ Sections and categories shown only when they have findings.
 | **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports |
 | **DUPLICATES** | Clone Groups |
 | **HEALTH** | Complexity, Hotspots, Refactoring Targets |
+| **ARCHITECTURE** | Boundary Violations (requires `.fallow.json` boundaries) |
 
 Severity is color-coded: errors red, warnings yellow, hints grey.
 
@@ -126,7 +128,10 @@ Severity is color-coded: errors red, warnings yellow, hints grey.
 ```lua
 require("vallow").setup({
   fallow_cmd  = "fallow",
-  fallow_args = {},  -- extra flags, e.g. {"--score", "--hotspots"}
+  fallow_args = {},  -- extra CLI flags forwarded verbatim
+
+  -- Which analyses to run. Remove entries to skip them entirely.
+  analyses = { "dead-code", "dupes", "health" },
 
   window = {
     position = "right",  -- "bottom" | "top" | "left" | "right"
@@ -175,6 +180,16 @@ vim.o.statusline = "%{%v:lua.require('vallow').statusline()%}"
 ```
 
 Shows `vallow 42` when issues exist, `vallow ✓` when clean, empty when not run.
+
+### Filter to current file
+
+From any buffer, open the panel and filter findings to that file:
+
+```lua
+vim.keymap.set("n", "<leader>%", require("vallow").filter_current_file)
+```
+
+Press again to toggle the filter off.
 
 ### Adding custom sections
 

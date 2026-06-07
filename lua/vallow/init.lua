@@ -21,6 +21,43 @@ M.refresh = function()
   require("vallow.panel").refresh()
 end
 
+-- Open the panel (if not open) and filter findings to the current file.
+-- Bind this to whatever key you like:
+--   vim.keymap.set("n", "%", require("vallow").filter_current_file)
+M.filter_current_file = function()
+  local panel = require("vallow.panel")
+  local path = vim.api.nvim_buf_get_name(0)
+  if not path or path == "" then
+    return
+  end
+
+  -- Open panel first if it isn't up
+  if not panel._is_open() then
+    panel.open()
+  end
+
+  local pbuf = panel.state.buf
+  if not pbuf then
+    return
+  end
+
+  local root = panel.state.results and panel.state.results.repo_root
+  local rel = root and path:gsub("^" .. vim.pesc(root) .. "/", "") or vim.fn.fnamemodify(path, ":.")
+
+  -- Toggle: pressing again on the same file clears the filter
+  if (vim.b[pbuf].vallow_filter or "") == rel then
+    vim.b[pbuf].vallow_filter = ""
+    vim.notify("vallow: filter cleared", vim.log.levels.INFO)
+  else
+    vim.b[pbuf].vallow_filter = rel
+    vim.notify("vallow: filter → " .. rel, vim.log.levels.INFO)
+  end
+
+  if panel.state.results then
+    require("vallow.panel.render").render(pbuf, panel.state.results, panel.state.win)
+  end
+end
+
 -- Returns a statusline string showing the current finding count.
 -- Works without Nerd Font by default. Override prefix via setup:
 --   require("vallow").setup({ statusline = { prefix = " " } })

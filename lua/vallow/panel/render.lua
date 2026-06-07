@@ -450,68 +450,41 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       end
     end
 
-    -- Pre-compute column widths for alignment
-    local cyc_col_w, cog_col_w, name_col_w = 0, 0, 0
-    for _, it in ipairs(items) do
-      if it.cyclomatic then
-        cyc_col_w = math.max(cyc_col_w, #tostring(it.cyclomatic))
-      end
-      if it.cognitive then
-        cog_col_w = math.max(cog_col_w, #tostring(it.cognitive))
-      end
-      local nm = it.name == "<arrow>" and "λ" or (it.name or "")
-      name_col_w = math.max(name_col_w, #nm)
-    end
-    name_col_w = math.min(name_col_w, 18)
-    -- Cap path at 36 so it doesn't expand to fill wide panels
-    local path_w = math.min(36, math.max(20, win_width - #indent - name_col_w - cyc_col_w - cog_col_w - 12))
-    -- Ensure metric columns are at least as wide as their header labels
-    cyc_col_w = math.max(cyc_col_w, 3) -- "cyc"
-    cog_col_w = math.max(cog_col_w, 3) -- "cog"
-
-    local gap = "   "
-
-    -- Dim column header so the two metric columns are self-documenting
-    do
-      local hdr = indent
-        .. M._dpad("path", path_w)
-        .. gap
-        .. M._dpad("name", name_col_w)
-        .. gap
-        .. M._dpad("cyc", cyc_col_w)
-        .. gap
-        .. "cog"
-      push(hdr, 0, -1, "VallowKind", nil)
-    end
+    -- Two-line layout: path on first line (full width), name + metrics underneath.
+    -- Avoids column-squeeze truncation on deep paths.
+    local path_w = win_width - #indent - 2
+    local sub = indent .. "  " -- extra indent for the metrics line
 
     for _, item in ipairs(items) do
       local p = M._truncate(item.relative_path or "", path_w)
       -- <arrow> = anonymous arrow function; λ is the universal shorthand
       local name = item.name == "<arrow>" and "λ" or (item.name or "")
-      name = M._truncate(name, name_col_w)
       local cyc_s = item.cyclomatic and tostring(item.cyclomatic) or ""
       local cog_s = item.cognitive and tostring(item.cognitive) or ""
 
-      local p_padded = M._dpad(p, path_w)
-      local name_padded = M._dpad(name, name_col_w)
-      local cyc_padded = M._dpad(cyc_s, cyc_col_w)
+      -- Line 1: path (acts as the jump target)
+      push(indent .. p, #indent, #indent + #p, "VallowPath", item)
 
-      local row = indent .. p_padded .. gap
-      local nm_pos = #row
-      row = row .. name_padded .. gap
-      local cy_pos = #row
-      row = row .. cyc_padded .. gap
-      local co_pos = #row
-      row = row .. cog_s
-
-      push(row, 0, 0, nil, item)
-      hl_last(#indent, #indent + #p, "VallowPath")
-      hl_last(nm_pos, nm_pos + #name, "VallowName")
+      -- Line 2: name   cyc N  cog N
+      local met = sub .. M._dpad(name, 28)
+      local cy_pos = #met
       if cyc_s ~= "" then
-        hl_last(cy_pos, cy_pos + #cyc_s, cyc_hl(item.cyclomatic))
+        met = met .. "cyc " .. cyc_s
+      end
+      local co_pos = #met
+      if cyc_s ~= "" and cog_s ~= "" then
+        met = met .. "  "
+      end
+      local co_val_pos = #met
+      if cog_s ~= "" then
+        met = met .. "cog " .. cog_s
+      end
+      push(met, #sub, #sub + #name, "VallowKind", item)
+      if cyc_s ~= "" then
+        hl_last(cy_pos + 4, cy_pos + 4 + #cyc_s, cyc_hl(item.cyclomatic))
       end
       if cog_s ~= "" then
-        hl_last(co_pos, co_pos + #cog_s, cog_hl(item.cognitive))
+        hl_last(co_val_pos + 4, co_val_pos + 4 + #cog_s, cog_hl(item.cognitive))
       end
     end
   elseif cat_key == "health_hotspots" then

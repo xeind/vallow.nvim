@@ -31,7 +31,7 @@ M.run = function(callback)
     table.insert(cmd, a)
   end
 
-  vim.fn.jobstart(cmd, {
+  local job_id = vim.fn.jobstart(cmd, {
     cwd = root,
     on_stdout = function(_, data)
       for _, l in ipairs(data) do
@@ -79,6 +79,12 @@ M.run = function(callback)
       end)
     end,
   })
+  if job_id == -1 then
+    callback({
+      error = "vallow: failed to start '" .. cfg.fallow_cmd .. "' (not found in PATH?)",
+      findings = M._empty_findings(),
+    })
+  end
 end
 
 M._run_separate = function(gen, root, cfg, callback)
@@ -134,7 +140,7 @@ end
 
 M._job = function(cmd, cwd, callback)
   local stdout, stderr = {}, {}
-  vim.fn.jobstart(cmd, {
+  local job_id = vim.fn.jobstart(cmd, {
     cwd = cwd,
     on_stdout = function(_, data)
       for _, l in ipairs(data) do
@@ -160,6 +166,9 @@ M._job = function(cmd, cwd, callback)
       callback(ok, decoded)
     end,
   })
+  if job_id == -1 then
+    callback(false, "failed to start: " .. table.concat(cmd, " "))
+  end
 end
 
 -- Normalize fallow JSON → output contract.
@@ -367,8 +376,8 @@ M._normalize = function(raw, root)
   -- boundary_violations[]
   for _, v in ipairs(check.boundary_violations or {}) do
     table.insert(findings.boundary_violations.items, {
-      path = v.path or "",
-      relative_path = rel(v.path),
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
       lnum = v.line or 1,
       col = v.col or 0,
       import_path = v.import_path or v.importPath or "",
