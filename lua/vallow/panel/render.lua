@@ -458,7 +458,7 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
 
     local name_w, file_w, cyc_w, cog_w = 0, 0, 0, 0
     for _, it in ipairs(items) do
-      local nm = it.name == "<arrow>" and "λ" or (it.name or "")
+      local nm = it.name == "<arrow>" and ("λ:" .. (it.lnum or "?")) or (it.name or "")
       name_w = math.max(name_w, #nm)
       file_w = math.max(file_w, #basename(it.relative_path))
       if it.cyclomatic then
