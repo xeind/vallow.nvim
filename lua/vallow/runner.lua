@@ -114,6 +114,13 @@ M._normalize = function(raw, root)
     return p:gsub("^" .. vim.pesc(root) .. "/", "")
   end
 
+  -- abs: ensure path is absolute (fallow outputs relative paths for some categories)
+  local function abs(p)
+    if not p or p == "" then return "" end
+    if p:sub(1, 1) == "/" then return p end
+    return root .. "/" .. p
+  end
+
   -- unused_exports[], unused_types[], unused_enum_members[], unused_class_members[]
   local function push_export(item, default_kind)
     local name = item.export_name or item.exportName or ""
@@ -179,22 +186,74 @@ M._normalize = function(raw, root)
   findings.unlisted_deps.count      = #findings.unlisted_deps.items
 
   -- duplicate_exports[]
+  -- Schema v7 (docs): { path: abs, line, export_name, duplicate_locations: [{path,line,col}] }
+  -- Live format:       { export_name, locations: [{path: rel, line, col}] }
   for _, v in ipairs(check.duplicate_exports or {}) do
-    local locs = {{ path = v.path or "", relative_path = rel(v.path), lnum = v.line or 1, col = v.col or 0 }}
-    for _, loc in ipairs(v.duplicate_locations or v.duplicateLocations or {}) do
-      table.insert(locs, { path = loc.path or "", relative_path = rel(loc.path), lnum = loc.line or 1, col = loc.col or 0 })
+    local locs = {}
+    if v.path and v.path ~= "" then
+      -- Schema v7: primary location at top level, rest in duplicate_locations
+      table.insert(locs, {
+        path          = abs(v.path),
+        relative_path = rel(abs(v.path)),
+        lnum          = v.line or 1,
+        col           = v.col  or 0,
+      })
+      for _, loc in ipairs(v.duplicate_locations or v.duplicateLocations or {}) do
+        table.insert(locs, {
+          path          = abs(loc.path or ""),
+          relative_path = rel(abs(loc.path or "")),
+          lnum          = loc.line or 1,
+          col           = loc.col  or 0,
+        })
+      end
+    else
+      -- Live format: all locations in one array
+      for _, loc in ipairs(v.locations or v.duplicate_locations or v.duplicateLocations or {}) do
+        local raw = loc.path or ""
+        table.insert(locs, {
+          path          = abs(raw),
+          relative_path = rel(abs(raw)),
+          lnum          = loc.line or 1,
+          col           = loc.col  or 0,
+        })
+      end
     end
+    local first = locs[1] or {}
     table.insert(findings.duplicate_exports.items, {
-      name = v.export_name or v.exportName or "", locations = locs,
+      name      = v.export_name or v.exportName or v.name or "",
+      locations = locs,
+      path      = first.path or "",
+      lnum      = first.lnum or 1,
     })
   end
   findings.duplicate_exports.count = #findings.duplicate_exports.items
 
   -- circular_dependencies[]
+  -- Schema v7 (docs): { path: abs, cycle: [abs, ...] }
+  -- Live format:       { files: [rel, ...], edges: [{path, line, col}, ...], line, col }
   for _, v in ipairs(check.circular_dependencies or {}) do
+    local raw_path, cycle, lnum, col
+    if v.path and v.path ~= "" then
+      -- Schema v7 format
+      raw_path = v.path
+      cycle    = v.cycle or {}
+      lnum     = v.line or 1
+      col      = v.col  or 0
+    else
+      -- Live format
+      local edges = v.edges or {}
+      local entry = edges[1] or {}
+      raw_path = entry.path or (v.files and v.files[1]) or ""
+      cycle    = v.files or {}
+      lnum     = entry.line or v.line or 1
+      col      = entry.col  or v.col  or 0
+    end
     table.insert(findings.circular_deps.items, {
-      path = v.path or "", relative_path = rel(v.path),
-      cycle = v.cycle or {},
+      path          = abs(raw_path),
+      relative_path = rel(abs(raw_path)),
+      lnum          = lnum,
+      col           = col,
+      cycle         = cycle,
     })
   end
   findings.circular_deps.count = #findings.circular_deps.items
@@ -213,12 +272,21 @@ M._normalize = function(raw, root)
   findings.boundary_violations.count = #findings.boundary_violations.items
 
   -- clone_groups[] from dupes
+  -- Live fallow uses several field-name variants across versions:
+  --   path: "path" | "file" | "file_path" | "filePath"
+  --   line: "line" | "lineStart" | "line_start" | "start_line"
   for _, g in ipairs(dupes_raw.clone_groups or {}) do
     local locs = {}
     for _, inst in ipairs(g.instances or {}) do
+      local ipath = inst.path or inst.file or inst.file_path or inst.filePath or ""
+      local ilnum = inst.line or inst.lineStart or inst.line_start or inst.start_line or 1
+      local iend  = inst.lineEnd or inst.line_end or inst.end_line or inst.lineStart
       table.insert(locs, {
-        path = inst.path or "", relative_path = rel(inst.path),
-        lnum = inst.line or 1, end_lnum = inst.lineEnd or inst.line_end, col = inst.col or 0,
+        path          = abs(ipath),
+        relative_path = rel(abs(ipath)),
+        lnum          = ilnum,
+        end_lnum      = iend,
+        col           = inst.col or 0,
       })
     end
     table.insert(findings.clone_groups.items, {
