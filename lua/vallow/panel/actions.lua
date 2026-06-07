@@ -27,8 +27,9 @@ M.setup = function(buf)
   map("v",      function() M._do_jump(buf, "vsplit") end)
   map("t",      function() M._do_jump(buf, "tabedit") end)
 
-  -- Vim-native fold keys
+  -- Vim-native fold keys (zA mapped so it doesn't fall through to Neovim's built-in)
   map("za", function() M.toggle_fold(buf) end)
+  map("zA", function() M.toggle_fold(buf) end)
   map("zo", function() M.set_fold(buf, true) end)
   map("zc", function() M.set_fold(buf, false) end)
   map("zR", function() M.set_all_folds(buf, true) end)
@@ -96,7 +97,25 @@ M.toggle_fold = function(buf)
     vim.b[buf].vallow_open_cats = c
 
   else
-    return
+    -- Regular item: walk up to find the nearest parent header/section and close it
+    local lnum     = vim.api.nvim_win_get_cursor(0)[1]
+    local line_map = require("vallow.panel.render").get_line_map(buf)
+    for l = lnum - 1, 1, -1 do
+      local parent = line_map[l]
+      if parent and parent._type == "header" then
+        local c = vim.b[buf].vallow_open_cats or {}
+        c[parent.key] = false
+        vim.b[buf].vallow_open_cats = c
+        pcall(vim.api.nvim_win_set_cursor, 0, { l, 0 })
+        break
+      elseif parent and parent._type == "section" then
+        local s = vim.b[buf].vallow_open_secs or {}
+        s[parent.key] = false
+        vim.b[buf].vallow_open_secs = s
+        pcall(vim.api.nvim_win_set_cursor, 0, { l, 0 })
+        break
+      end
+    end
   end
 
   local panel = require("vallow.panel")
