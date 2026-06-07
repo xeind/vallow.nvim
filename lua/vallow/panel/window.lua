@@ -5,22 +5,22 @@ M.create = function()
   local cfg = require("vallow.config").get().window
   local buf = vim.api.nvim_create_buf(false, true)
 
-  vim.bo[buf].buftype  = "nofile"
+  vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = "wipe"
   vim.api.nvim_buf_set_name(buf, "vallow://panel")
 
   local win = M._open_split(cfg, buf)
 
-  vim.wo[win].number         = false
+  vim.wo[win].number = false
   vim.wo[win].relativenumber = true
-  vim.wo[win].signcolumn     = "no"
-  vim.wo[win].foldcolumn     = "0"
-  vim.wo[win].wrap           = false
-  vim.wo[win].list           = false
-  vim.wo[win].winfixheight   = cfg.position == "bottom" or cfg.position == "top"
-  vim.wo[win].winfixwidth    = cfg.position == "left"  or cfg.position == "right"
-  vim.wo[win].cursorline     = true
+  vim.wo[win].signcolumn = "no"
+  vim.wo[win].foldcolumn = "0"
+  vim.wo[win].wrap = false
+  vim.wo[win].list = false
+  vim.wo[win].winfixheight = cfg.position == "bottom" or cfg.position == "top"
+  vim.wo[win].winfixwidth = cfg.position == "left" or cfg.position == "right"
+  vim.wo[win].cursorline = true
 
   vim.bo[buf].filetype = "vallow"
 
@@ -28,7 +28,7 @@ M.create = function()
 end
 
 M._open_split = function(cfg, buf)
-  local pos  = cfg.position or "bottom"
+  local pos = cfg.position or "bottom"
   local size = cfg.size or 0.35
 
   local split_cmd

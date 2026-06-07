@@ -3,11 +3,13 @@ local M = {}
 
 -- Flatten all findings into a list of entries for the picker
 local function flatten(results)
-  if not results or not results.findings then return {} end
+  if not results or not results.findings then
+    return {}
+  end
   local entries = {}
 
   local LABEL = require("vallow.labels").label
-  local cfg   = require("vallow.config").get()
+  local cfg = require("vallow.config").get()
 
   -- Use _resolve_findings so "sources" categories (unused_members etc.) are merged
   local render = require("vallow.panel.render")
@@ -16,20 +18,20 @@ local function flatten(results)
     if d and d.items then
       local lbl = cat_cfg.label or LABEL[cat_key] or cat_key
       for _, item in ipairs(d.items) do
-        local lnum     = item.lnum or 1
-        local name     = item.name or ""
+        local lnum = item.lnum or 1
+        local name = item.name or ""
         local rel_path = item.relative_path or ""
         -- Show line number so entries from the same file are distinct
         local loc = rel_path ~= "" and (rel_path .. ":" .. lnum) or ""
         local display = string.format("%-18s  %-45s  %s", lbl, loc, name)
         table.insert(entries, {
-          display  = display,
-          path     = item.path,
-          lnum     = lnum,
-          col      = item.col or 0,
-          cat      = cat_key,
-          label    = lbl,
-          name     = name,
+          display = display,
+          path = item.path,
+          lnum = lnum,
+          col = item.col or 0,
+          cat = cat_key,
+          label = lbl,
+          name = name,
           rel_path = rel_path,
         })
       end
@@ -41,7 +43,7 @@ local function flatten(results)
   for key, sec_cfg in pairs(cfg.sections or {}) do
     sec_order[key] = sec_cfg.order or 99
   end
-  local cat_sort_key = {}  -- cat_key → global sort int (sec_order * 100 + cat_order)
+  local cat_sort_key = {} -- cat_key → global sort int (sec_order * 100 + cat_order)
   for key, cat_cfg in pairs(cfg.categories or {}) do
     local s = sec_order[cat_cfg.section or ""] or 99
     cat_sort_key[key] = s * 100 + (cat_cfg.order or 99)
@@ -50,8 +52,12 @@ local function flatten(results)
   table.sort(entries, function(a, b)
     local ka = cat_sort_key[a.cat] or 9999
     local kb = cat_sort_key[b.cat] or 9999
-    if ka ~= kb then return ka < kb end
-    if a.rel_path ~= b.rel_path then return a.rel_path < b.rel_path end
+    if ka ~= kb then
+      return ka < kb
+    end
+    if a.rel_path ~= b.rel_path then
+      return a.rel_path < b.rel_path
+    end
     return (a.lnum or 0) < (b.lnum or 0)
   end)
 
@@ -59,7 +65,9 @@ local function flatten(results)
 end
 
 local function jump(entry)
-  if not entry or not entry.path or entry.path == "" then return end
+  if not entry or not entry.path or entry.path == "" then
+    return
+  end
   local cur = vim.api.nvim_get_current_win()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
@@ -69,7 +77,9 @@ local function jump(entry)
     end
   end
   local ok = pcall(vim.cmd, "edit " .. vim.fn.fnameescape(entry.path))
-  if not ok then return end
+  if not ok then
+    return
+  end
   if entry.lnum then
     pcall(vim.api.nvim_win_set_cursor, 0, { math.max(1, entry.lnum), math.max(0, entry.col or 0) })
     vim.cmd("normal! zz")
@@ -79,38 +89,40 @@ end
 
 -- ── Telescope ────────────────────────────────────────────────────────
 local function open_telescope(entries)
-  local pickers      = require("telescope.pickers")
-  local finders      = require("telescope.finders")
-  local conf         = require("telescope.config").values
-  local actions      = require("telescope.actions")
+  local pickers = require("telescope.pickers")
+  local finders = require("telescope.finders")
+  local conf = require("telescope.config").values
+  local actions = require("telescope.actions")
   local action_state = require("telescope.actions.state")
 
-  pickers.new({}, {
-    prompt_title = "Vallow Findings",
-    previewer    = conf.file_previewer({}),
-    finder = finders.new_table({
-      results = entries,
-      entry_maker = function(e)
-        return {
-          value    = e,
-          display  = e.display,
-          ordinal  = e.cat .. " " .. e.rel_path .. " " .. e.name,
-          -- These fields drive the file previewer to the right line:
-          filename = e.path,
-          lnum     = e.lnum,
-          col      = e.col,
-        }
+  pickers
+    .new({}, {
+      prompt_title = "Vallow Findings",
+      previewer = conf.file_previewer({}),
+      finder = finders.new_table({
+        results = entries,
+        entry_maker = function(e)
+          return {
+            value = e,
+            display = e.display,
+            ordinal = e.cat .. " " .. e.rel_path .. " " .. e.name,
+            -- These fields drive the file previewer to the right line:
+            filename = e.path,
+            lnum = e.lnum,
+            col = e.col,
+          }
+        end,
+      }),
+      sorter = conf.generic_sorter({}),
+      attach_mappings = function(prompt_bufnr)
+        actions.select_default:replace(function()
+          actions.close(prompt_bufnr)
+          jump(action_state.get_selected_entry().value)
+        end)
+        return true
       end,
-    }),
-    sorter = conf.generic_sorter({}),
-    attach_mappings = function(prompt_bufnr)
-      actions.select_default:replace(function()
-        actions.close(prompt_bufnr)
-        jump(action_state.get_selected_entry().value)
-      end)
-      return true
-    end,
-  }):find()
+    })
+    :find()
 end
 
 -- ── fzf-lua ──────────────────────────────────────────────────────────
@@ -127,15 +139,17 @@ local function open_fzf(entries)
   end
 
   fzf.fzf_exec(items, {
-    prompt    = "Vallow> ",
+    prompt = "Vallow> ",
     previewer = "builtin",
-    fzf_opts  = {
-      ["--delimiter"]  = ":",
-      ["--with-nth"]   = "4..",  -- show only the display part in the list
+    fzf_opts = {
+      ["--delimiter"] = ":",
+      ["--with-nth"] = "4..", -- show only the display part in the list
     },
     actions = {
       ["default"] = function(selected)
-        if not selected or not selected[1] then return end
+        if not selected or not selected[1] then
+          return
+        end
         -- fzf returns the original full string; parse path and lnum back out
         local path, lnum_s = selected[1]:match("^([^:]+):(%d+):%d+:")
         if path then
@@ -153,17 +167,19 @@ local function open_snacks(entries)
     table.insert(items, {
       text = e.display,
       file = e.path,
-      pos  = { e.lnum or 1, (e.col or 0) + 1 },
-      _e   = e,
+      pos = { e.lnum or 1, (e.col or 0) + 1 },
+      _e = e,
     })
   end
   require("snacks").picker.pick({
-    title   = "Vallow Findings",
-    items   = items,
+    title = "Vallow Findings",
+    items = items,
     preview = "file",
     confirm = function(picker, item)
       picker:close()
-      if item then jump(item._e) end
+      if item then
+        jump(item._e)
+      end
     end,
   })
 end
@@ -171,10 +187,14 @@ end
 -- ── vim.ui.select fallback ───────────────────────────────────────────
 local function open_select(entries)
   vim.ui.select(entries, {
-    prompt      = "Vallow findings",
-    format_item = function(e) return e.display end,
+    prompt = "Vallow findings",
+    format_item = function(e)
+      return e.display
+    end,
   }, function(e)
-    if e then jump(e) end
+    if e then
+      jump(e)
+    end
   end)
 end
 

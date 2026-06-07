@@ -18,9 +18,7 @@ function M.check()
     local version = vim.fn.system(cmd .. " --version 2>&1"):gsub("\n", "")
     vim.health.ok(("fallow: %s"):format(version))
   else
-    vim.health.error(
-      ("fallow not found (%q) — install with: npm i -g fallow"):format(cmd)
-    )
+    vim.health.error(("fallow not found (%q) — install with: npm i -g fallow"):format(cmd))
   end
 
   -- package.json reachable from cwd

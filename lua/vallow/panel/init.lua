@@ -1,12 +1,11 @@
 local M = {}
 
 M.state = {
-  buf             = nil,
-  win             = nil,
-  results         = nil,
-  current_section = nil,  -- nil = ALL tabs visible
+  buf = nil,
+  win = nil,
+  results = nil,
+  current_section = nil, -- nil = ALL tabs visible
 }
-
 
 M.open = function()
   if M._is_open() then
@@ -21,7 +20,7 @@ M.open = function()
   -- Clean up state when buffer is closed
   vim.api.nvim_create_autocmd("BufWipeout", {
     buffer = M.state.buf,
-    once   = true,
+    once = true,
     callback = function()
       require("vallow.panel.render").clear(M.state.buf)
       M.state.buf = nil
@@ -33,7 +32,7 @@ M.open = function()
 
   -- Re-apply diagnostics when a new buffer is opened after analysis ran
   vim.api.nvim_create_autocmd("BufEnter", {
-    group    = vim.api.nvim_create_augroup("VallowDiagBufEnter", { clear = true }),
+    group = vim.api.nvim_create_augroup("VallowDiagBufEnter", { clear = true }),
     callback = function(ev)
       if M.state.results and M.state.results.findings then
         require("vallow.diagnostics").apply_buf(ev.buf, M.state.results.findings)
@@ -61,21 +60,26 @@ M.toggle = function()
 end
 
 M.refresh = function()
-  if not M._is_open() then return end
+  if not M._is_open() then
+    return
+  end
 
   local render = require("vallow.panel.render")
 
   -- Show loading state immediately
   render.render(M.state.buf, { _loading = true }, M.state.win)
-  require("vallow.panel.tabs").set_winbar(
-    M.state.win, M.state.current_section, nil, require("vallow.config").get())
+  require("vallow.panel.tabs").set_winbar(M.state.win, M.state.current_section, nil, require("vallow.config").get())
 
   require("vallow.runner").run(function(results)
     M.state.results = results
     if M._is_open() then
       render.render(M.state.buf, results, M.state.win)
       require("vallow.panel.tabs").set_winbar(
-        M.state.win, M.state.current_section, results, require("vallow.config").get())
+        M.state.win,
+        M.state.current_section,
+        results,
+        require("vallow.config").get()
+      )
     end
     -- Push findings as inline diagnostics to open buffers
     require("vallow.diagnostics").apply(results.findings)
