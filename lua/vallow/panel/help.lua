@@ -8,13 +8,14 @@ local SECTIONS = {
       { key = "o", desc = "jump: horizontal split" },
       { key = "v", desc = "jump: vertical split" },
       { key = "t", desc = "jump: new tab" },
+      { key = "L / H", desc = "next / prev tab (section)" },
       { key = "]c / [c", desc = "next / prev section" },
     },
   },
   {
     title = "Folds",
     keys = {
-      { key = "za", desc = "toggle fold" },
+      { key = "za / <Tab>", desc = "toggle fold" },
       { key = "zo", desc = "open fold" },
       { key = "zc", desc = "close fold" },
       { key = "zR", desc = "open all" },

@@ -25,7 +25,7 @@ M.set_winbar = function(win, current_section, results, cfg)
   -- Build ordered section list from config (not hardcoded)
   local ordered = {}
   for key, sec_cfg in pairs(cfg and cfg.sections or {}) do
-    table.insert(ordered, { key = key, label = sec_cfg.label or key, order = sec_cfg.order or 99 })
+    table.insert(ordered, { key = key, icon = sec_cfg.icon or "", label = sec_cfg.label or key, order = sec_cfg.order or 99 })
   end
   table.sort(ordered, function(a, b)
     return a.order < b.order
@@ -66,8 +66,9 @@ M.set_winbar = function(win, current_section, results, cfg)
     local cnt = counts[sec.key] or 0
     -- Only show tab if it has findings or is currently active
     if cnt > 0 or sec.key == current_section then
+      local icon = sec.icon or ""
       local label = short_label(sec.label)
-      local text = cnt > 0 and (" " .. label .. " " .. cnt .. " ") or (" " .. label .. " ")
+      local text = cnt > 0 and (" " .. icon .. " " .. label .. " " .. cnt .. " ") or (" " .. icon .. " " .. label .. " ")
       local hl = current_section == sec.key and "VallowTabActive" or "VallowTabInactive"
       table.insert(parts, tab(text, hl))
     end

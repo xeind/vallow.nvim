@@ -92,8 +92,8 @@ All remappable via `setup({ keymaps = ... })`.
 | `o` | Jump in horizontal split |
 | `v` | Jump in vertical split |
 | `t` | Jump in new tab |
-| `L` / `H` | Next / previous section |
-| `]c` / `[c` | Next / previous section |
+| `L` / `H` | Next / previous tab (cycle sections) |
+| `]c` / `[c` | Jump to next / previous section header |
 | `<Tab>` / `za` | Toggle fold |
 | `zo` / `zc` | Open / close fold |
 | `zR` / `zM` | Open / close all folds |
@@ -119,7 +119,6 @@ Sections and categories shown only when they have findings.
 | **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports |
 | **DUPLICATES** | Clone Groups |
 | **HEALTH** | Complexity, Hotspots, Refactoring Targets |
-| **ARCHITECTURE** | Boundary Violations (requires `.fallow.json` boundaries) |
 
 Severity is color-coded: errors red, warnings yellow, hints grey.
 

@@ -18,11 +18,11 @@ M.defaults = {
   },
 
   sections = {
-    unused_code = { label = "UNUSED CODE", order = 1 },
-    issues = { label = "ISSUES", order = 2 },
-    duplicates = { label = "DUPLICATES", order = 3 },
-    health = { label = "HEALTH", order = 4 },
-    architecture = { label = "ARCHITECTURE", order = 5 },
+    unused_code  = { icon = "󰈔", label = "UNUSED CODE",  order = 1 },
+    issues       = { icon = "󰅖", label = "ISSUES",       order = 2 },
+    duplicates   = { icon = "󰏗", label = "DUPLICATES",   order = 3 },
+    health       = { icon = "󰚰", label = "HEALTH",       order = 4 },
+    architecture = { icon = "󰑷", label = "ARCHITECTURE", order = 5 },
   },
 
   -- severity: "error" | "warn" | "hint"

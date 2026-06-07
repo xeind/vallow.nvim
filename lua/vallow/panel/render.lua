@@ -135,8 +135,9 @@ M.render = function(buf, results, win)
         local sec_open = open_secs[sec.key] ~= false -- nil → open
 
         -- Section header row
+        local icon = sec.cfg.icon or ""
         local fold = sec_open and "▼" or "▶"
-        local sec_lbl = string.format("  %s %s", fold, sec.cfg.label)
+        local sec_lbl = string.format("  %s %s %s", fold, icon, sec.cfg.label)
         local cnt_str = sec_total > 0 and tostring(sec_total) or ""
         local sec_padded = M._dpad(sec_lbl, 26)
         local sec_line = sec_padded .. cnt_str
@@ -205,7 +206,9 @@ M.render = function(buf, results, win)
   local hints = {
     { "za", "fold" },
     { "<CR>", "jump" },
+    { "L/H", "tab" },
     { "P", "peek" },
+    { "K", "detail" },
     { "f", "filter" },
     { "%", "cur file" },
     { "r", "refresh" },
