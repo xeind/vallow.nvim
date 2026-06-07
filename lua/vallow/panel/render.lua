@@ -2,6 +2,17 @@ local M = {}
 
 local ns = vim.api.nvim_create_namespace("vallow")
 
+-- Optional nvim-web-devicons integration
+local _dv_ok, _dv = pcall(require, "nvim-web-devicons")
+
+local function file_icon(path)
+  if not _dv_ok then return "" end
+  local fname = (path or ""):match("([^/\\]+)$") or path or ""
+  local ext   = fname:match("%.([^%.]+)$")
+  local icon  = _dv.get_icon(fname, ext, { default = false })
+  return icon and (icon .. " ") or ""
+end
+
 -- Module-level store: avoids vim.b integer-key roundtrip bug
 local _line_maps = {}
 
@@ -239,8 +250,9 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
 
   elseif cat_key == "unused_files" then
     for _, item in ipairs(items) do
-      local p = item.relative_path or ""
-      push(indent .. p, #indent, #indent + #p, "VallowPath", item)
+      local p    = item.relative_path or ""
+      local icon = file_icon(p)
+      push(indent .. icon .. p, #indent, #indent + #icon + #p, "VallowPath", item)
     end
 
   elseif cat_key == "unused_deps" or cat_key == "unused_dev_deps"
@@ -390,13 +402,14 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
 
       -- Location sub-rows — each clickable, this is what "inst" actually means
       for _, loc in ipairs(locs) do
-        local rp  = M._truncate(loc.relative_path or "", win_width - #sub - 6)
-        local ln  = loc.lnum and (":" .. loc.lnum) or ""
-        local sub_row = sub .. rp .. ln
-        push(sub_row, #sub, #sub + #rp, "VallowPath",
+        local icon = file_icon(loc.relative_path or "")
+        local rp   = M._truncate(loc.relative_path or "", win_width - #sub - #icon - 6)
+        local ln   = loc.lnum and (":" .. loc.lnum) or ""
+        local sub_row = sub .. icon .. rp .. ln
+        push(sub_row, #sub, #sub + #icon + #rp, "VallowPath",
           { path = loc.path, lnum = loc.lnum })
         if ln ~= "" then
-          hl_last(#sub + #rp, #sub + #rp + #ln, "VallowKind")
+          hl_last(#sub + #icon + #rp, #sub + #icon + #rp + #ln, "VallowKind")
         end
       end
     end
@@ -563,9 +576,10 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
 
     local extra = "        "  -- 8 spaces: one extra level of indent
     for _, item in ipairs(items) do
-      local p   = M._truncate(item.relative_path or "", win_width - #indent - 2)
-      local rec = item.recommendation or item.category or ""
-      push(indent .. p, #indent, #indent + #p, "VallowPath", item)
+      local icon = file_icon(item.relative_path or "")
+      local p    = M._truncate(item.relative_path or "", win_width - #indent - #icon - 2)
+      local rec  = item.recommendation or item.category or ""
+      push(indent .. icon .. p, #indent, #indent + #icon + #p, "VallowPath", item)
       if rec ~= "" then
         push(extra .. rec, #extra, -1, pri_hl(item), item)
       end
