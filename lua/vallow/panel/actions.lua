@@ -502,18 +502,23 @@ M.peek = function(buf)
     pcall(vim.api.nvim_win_close, fwin, true)
   end
 
+  local close_keys = { "<Esc>", "P" }
+
+  local function cleanup()
+    for _, k in ipairs(close_keys) do
+      pcall(vim.keymap.del, "n", k, { buffer = buf })
+    end
+    close()
+  end
+
   -- Close on <Esc>, P, or any cursor movement in the panel
-  for _, key in ipairs({ "<Esc>", "P" }) do
-    local k = key
-    vim.keymap.set("n", k, function()
-      vim.keymap.del("n", k, { buffer = buf })
-      close()
-    end, { buffer = buf, nowait = true, silent = true })
+  for _, k in ipairs(close_keys) do
+    vim.keymap.set("n", k, cleanup, { buffer = buf, nowait = true, silent = true })
   end
   vim.api.nvim_create_autocmd("CursorMoved", {
     buffer = buf,
     once = true,
-    callback = close,
+    callback = cleanup,
   })
 end
 
