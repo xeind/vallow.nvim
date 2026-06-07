@@ -450,41 +450,64 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       end
     end
 
-    -- Two-line layout: path on first line (full width), name + metrics underneath.
-    -- Avoids column-squeeze truncation on deep paths.
-    local path_w = win_width - #indent - 2
-    local sub = indent .. "  " -- extra indent for the metrics line
+    -- Single-line: name | basename | cyc | cog
+    -- Full path accessible via K or <CR>. Columns sized from data.
+    local function basename(p)
+      return (p or ""):match("([^/\\]+)$") or p or ""
+    end
+
+    local name_w, file_w, cyc_w, cog_w = 0, 0, 0, 0
+    for _, it in ipairs(items) do
+      local nm = it.name == "<arrow>" and "λ" or (it.name or "")
+      name_w = math.max(name_w, #nm)
+      file_w = math.max(file_w, #basename(it.relative_path))
+      if it.cyclomatic then
+        cyc_w = math.max(cyc_w, #tostring(it.cyclomatic))
+      end
+      if it.cognitive then
+        cog_w = math.max(cog_w, #tostring(it.cognitive))
+      end
+    end
+    -- Cap and ensure header labels fit
+    name_w = math.max(math.min(name_w, 28), 4) -- "name"
+    file_w = math.max(math.min(file_w, 30), 4) -- "file"
+    cyc_w = math.max(cyc_w, 3) -- "cyc"
+    cog_w = math.max(cog_w, 3) -- "cog"
+
+    local gap = "  "
+    do
+      local hdr = indent
+        .. M._dpad("name", name_w)
+        .. gap
+        .. M._dpad("file", file_w)
+        .. gap
+        .. M._dpad("cyc", cyc_w)
+        .. gap
+        .. "cog"
+      push(hdr, 0, -1, "VallowKind", nil)
+    end
 
     for _, item in ipairs(items) do
-      local p = M._truncate(item.relative_path or "", path_w)
-      -- <arrow> = anonymous arrow function; λ is the universal shorthand
       local name = item.name == "<arrow>" and "λ" or (item.name or "")
+      local file = basename(item.relative_path)
       local cyc_s = item.cyclomatic and tostring(item.cyclomatic) or ""
       local cog_s = item.cognitive and tostring(item.cognitive) or ""
 
-      -- Line 1: path (acts as the jump target)
-      push(indent .. p, #indent, #indent + #p, "VallowPath", item)
+      local row = indent .. M._dpad(name, name_w) .. gap
+      local file_pos = #row
+      row = row .. M._dpad(file, file_w) .. gap
+      local cyc_pos = #row
+      row = row .. M._dpad(cyc_s, cyc_w) .. gap
+      local cog_pos = #row
+      row = row .. cog_s
 
-      -- Line 2: name   cyc N  cog N
-      local met = sub .. M._dpad(name, 28)
-      local cy_pos = #met
+      push(row, #indent, #indent + #name, "VallowName", item)
+      hl_last(file_pos, file_pos + #file, "VallowPath")
       if cyc_s ~= "" then
-        met = met .. "cyc " .. cyc_s
-      end
-      local co_pos = #met
-      if cyc_s ~= "" and cog_s ~= "" then
-        met = met .. "  "
-      end
-      local co_val_pos = #met
-      if cog_s ~= "" then
-        met = met .. "cog " .. cog_s
-      end
-      push(met, #sub, #sub + #name, "VallowKind", item)
-      if cyc_s ~= "" then
-        hl_last(cy_pos + 4, cy_pos + 4 + #cyc_s, cyc_hl(item.cyclomatic))
+        hl_last(cyc_pos, cyc_pos + #cyc_s, cyc_hl(item.cyclomatic))
       end
       if cog_s ~= "" then
-        hl_last(co_val_pos + 4, co_val_pos + 4 + #cog_s, cog_hl(item.cognitive))
+        hl_last(cog_pos, cog_pos + #cog_s, cog_hl(item.cognitive))
       end
     end
   elseif cat_key == "health_hotspots" then
