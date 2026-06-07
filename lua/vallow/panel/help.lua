@@ -22,6 +22,7 @@ local SECTIONS = {
   }},
   { title = "Actions", keys = {
     { key = "P",          desc = "peek code in float"      },
+    { key = "K",          desc = "detail / fix suggestions" },
     { key = "%",          desc = "filter: current file"    },
     { key = "r",          desc = "refresh"                 },
     { key = "Q",          desc = "send to quickfix list"   },

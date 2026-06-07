@@ -38,6 +38,7 @@ M.setup = function(buf)
   map("Q", function() M.send_to_qf(buf) end)
   map("y", function() M.yank_path(buf) end)
   map("P", function() M.peek(buf) end)
+  map("K", function() M.detail(buf) end)
   map("%", function() M.filter_current_buf(buf) end)
   map("?", function() require("vallow.panel.help").open() end)
 end
@@ -404,6 +405,73 @@ M.peek = function(buf)
     buffer = buf, once = true,
     callback = close,
   })
+end
+
+-- ── Detail float (K) ─────────────────────────────────────────────────
+
+M.detail = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then return end
+
+  local lines, hls = {}, {}
+  local function push(text, hl)
+    table.insert(lines, text)
+    if hl then table.insert(hls, { hl = hl, lnum = #lines - 1 }) end
+  end
+
+  push("")
+  local loc = item.relative_path or item.path or ""
+  if item.lnum then loc = loc .. ":" .. item.lnum end
+  if loc ~= "" then push("  " .. loc, "VallowPath") end
+  if item.name and item.name ~= "" then push("  " .. item.name, "VallowName") end
+  if item.kind and item.kind ~= "" then push("  kind: " .. item.kind, "VallowKind") end
+
+  if item.actions and #item.actions > 0 then
+    push("")
+    push("  Suggestions", "VallowSection")
+    for _, act in ipairs(item.actions) do
+      local text = type(act) == "table"
+        and (act.message or act.description or act.text or vim.inspect(act))
+        or tostring(act)
+      push("  • " .. text, "Comment")
+    end
+  end
+  push("")
+
+  local width = 0
+  for _, l in ipairs(lines) do width = math.max(width, vim.fn.strdisplaywidth(l)) end
+  width = math.max(40, math.min(width + 4, vim.o.columns - 10))
+
+  local fbuf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(fbuf, 0, -1, false, lines)
+  vim.bo[fbuf].modifiable = false
+
+  local fwin = vim.api.nvim_open_win(fbuf, false, {
+    relative  = "cursor",
+    row       = 1,
+    col       = 0,
+    width     = width,
+    height    = #lines,
+    style     = "minimal",
+    border    = "rounded",
+    title     = " Detail ",
+    title_pos = "center",
+  })
+  vim.wo[fwin].cursorline = false
+
+  local ns = vim.api.nvim_create_namespace("vallow_detail")
+  for _, h in ipairs(hls) do
+    vim.api.nvim_buf_add_highlight(fbuf, ns, h.hl, h.lnum, 2, -1)
+  end
+
+  local function close()
+    pcall(vim.api.nvim_win_close, fwin, true)
+    pcall(vim.api.nvim_buf_delete, fbuf, { force = true })
+  end
+  for _, key in ipairs({ "<Esc>", "K", "q" }) do
+    vim.keymap.set("n", key, close, { buffer = buf, once = true, nowait = true, silent = true })
+  end
+  vim.api.nvim_create_autocmd("CursorMoved", { buffer = buf, once = true, callback = close })
 end
 
 -- ── Current-buffer filter ─────────────────────────────────────────────
