@@ -320,7 +320,7 @@ M._normalize = function(raw, root)
       name      = g.suggested_name or g.suggestedName or ("dup:" .. (g.fingerprint or "?")),
       locations = locs,
       tokens    = g.tokens,
-      lines     = g.lines,
+      lines     = g.lines or g.line_count or g.lineCount or g.num_lines,
     })
   end
   findings.clone_groups.count = #findings.clone_groups.items
