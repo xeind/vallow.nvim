@@ -60,7 +60,7 @@ M.render = function(buf, results, win)
     M._flush(buf, lines, hl_queue); _line_maps[buf] = line_map; return
   end
 
-  if results.error then
+  if results.error and results.error ~= "" then
     push("  Error: " .. tostring(results.error), 2, -1, "VallowError")
     M._flush(buf, lines, hl_queue); _line_maps[buf] = line_map; return
   end

@@ -20,16 +20,9 @@ M.run = function(callback)
   local root = M.find_root()
   local stdout, stderr = {}, {}
 
+  -- Combined mode: plain fallow run. Health flags only go through _run_separate
+  -- (fallow combined mode may not support --score/--hotspots/--targets).
   local cmd = { cfg.fallow_cmd, "--format", "json", "--quiet" }
-  -- Add health flags automatically when "health" is in analyses
-  for _, a in ipairs(cfg.analyses or { "dead-code", "dupes", "health" }) do
-    if a == "health" then
-      table.insert(cmd, "--score")
-      table.insert(cmd, "--hotspots")
-      table.insert(cmd, "--targets")
-      break
-    end
-  end
   for _, a in ipairs(cfg.fallow_args or {}) do table.insert(cmd, a) end
 
   vim.fn.jobstart(cmd, {
@@ -45,8 +38,14 @@ M.run = function(callback)
         if gen ~= _gen then return end
         local raw = table.concat(stdout, "")
         if code ~= 0 then
-          if raw == "" then M._run_separate(gen, root, cfg, callback)
-          else callback({ error = table.concat(stderr, "\n"), findings = M._empty_findings() }) end
+          if raw == "" then
+            M._run_separate(gen, root, cfg, callback)
+          else
+            -- Prefer stderr; fall back to first 200 chars of stdout if stderr is empty
+            local err = table.concat(stderr, "\n")
+            if err == "" then err = raw:sub(1, 200) end
+            callback({ error = err, findings = M._empty_findings() })
+          end
           return
         end
         if raw == "" then M._run_separate(gen, root, cfg, callback); return end
@@ -373,7 +372,10 @@ M._merge_separate = function(raw, root)
     merged.elapsed_ms = merged.elapsed_ms + (raw.health.data.elapsed_ms or 0)
   end
   local result = M._normalize(merged, root)
-  if raw.dead_code and not raw.dead_code.ok then result.error = raw.dead_code.data end
+  if raw.dead_code and not raw.dead_code.ok then
+    local msg = raw.dead_code.data
+    if msg and msg ~= "" then result.error = msg end
+  end
   return result
 end
 
