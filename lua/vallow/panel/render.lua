@@ -12,6 +12,12 @@ M.render = function(buf, results, win)
   local cfg = require("vallow.config").get()
   local lines, line_map, hl_queue = {}, {}, {}
 
+  -- Save cursor so fold toggles and refreshes don't jump the view
+  local saved_cursor
+  if win and vim.api.nvim_win_is_valid(win) then
+    saved_cursor = vim.api.nvim_win_get_cursor(win)
+  end
+
   local win_width = 80
   if win and vim.api.nvim_win_is_valid(win) then
     win_width = vim.api.nvim_win_get_width(win)
@@ -96,17 +102,22 @@ M.render = function(buf, results, win)
     if sec_total == 0 and not has_score then goto next_sec end
 
     total_issues = total_issues + sec_total
+
+    -- Blank separator before each section for visual breathing room
+    if #lines > 2 then push("", 0, 0, nil, nil) end
+
     local sec_open = open_secs[sec.key] ~= false  -- nil → open
 
     -- Section header row
-    local fold     = sec_open and "▼" or "▶"
-    local sec_lbl  = string.format("  %s %s", fold, sec.cfg.label)
-    local cnt_str  = sec_total > 0 and ("  " .. tostring(sec_total)) or ""
-    local sec_line = sec_lbl .. cnt_str
+    local fold       = sec_open and "▼" or "▶"
+    local sec_lbl    = string.format("  %s %s", fold, sec.cfg.label)
+    local cnt_str    = sec_total > 0 and tostring(sec_total) or ""
+    local sec_padded = M._dpad(sec_lbl, 26)
+    local sec_line   = sec_padded .. cnt_str
     push(sec_line, 2, #sec_lbl, "VallowSection",
       { _type = "section", key = sec.key })
     if cnt_str ~= "" then
-      hl_last(#sec_lbl, #sec_line, "VallowCount")
+      hl_last(#sec_padded, #sec_line, "VallowCount")
     end
 
     if not sec_open then goto next_sec end
@@ -139,11 +150,12 @@ M.render = function(buf, results, win)
       local cat_cnt = filter_query ~= ""
         and (tostring(#items) .. "/" .. tostring(d.count))
         or  tostring(d.count)
-      local cat_lbl  = string.format("    %s %s %s", cat_fold, cat.cfg.icon, cat.cfg.label)
-      local cat_line = cat_lbl .. "  " .. cat_cnt
+      local cat_lbl    = string.format("    %s %s %s", cat_fold, cat.cfg.icon, cat.cfg.label)
+      local cat_padded = M._dpad(cat_lbl, 34)
+      local cat_line   = cat_padded .. cat_cnt
       push(cat_line, 4, #cat_lbl, sev_hl,
         { _type = "header", key = cat.key })
-      hl_last(#cat_lbl, #cat_line, sev_hl)
+      hl_last(#cat_padded, #cat_padded + #cat_cnt, sev_hl)
 
       if cat_open then
         local max   = cfg.max_items or 30
@@ -171,8 +183,32 @@ M.render = function(buf, results, win)
   push(string.format("  %d issue%s%s",
     total_issues, total_issues == 1 and "" or "s", ms), 0, -1, "VallowFooter")
 
+  -- Key hint bar
+  local hints = {
+    { "za",   "fold"    },
+    { "<CR>", "jump"    },
+    { "P",     "peek"    },
+    { "f",     "filter"  },
+    { "%",     "cur file"},
+    { "r",     "refresh" },
+    { "?",     "help"    },
+  }
+  local hint_parts = {}
+  for _, h in ipairs(hints) do
+    table.insert(hint_parts, h[1] .. " " .. h[2])
+  end
+  local hint_line = "  " .. table.concat(hint_parts, "  ·  ")
+  push(hint_line, 0, -1, "VallowFooter")
+
   M._flush(buf, lines, hl_queue)
   _line_maps[buf] = line_map
+
+  -- Restore cursor position (clamped to new line count)
+  if saved_cursor and win and vim.api.nvim_win_is_valid(win) then
+    local nlines = vim.api.nvim_buf_line_count(buf)
+    pcall(vim.api.nvim_win_set_cursor, win,
+      { math.min(math.max(1, saved_cursor[1]), nlines), saved_cursor[2] })
+  end
 end
 
 -- Render items for a category into the running push/hl_last closures
@@ -183,6 +219,11 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       or cat_key == "unused_enum_members" or cat_key == "unused_class_members"
       or cat_key == "unused_members" then
     local path_w, name_w = M._col_widths(items, win_width - 12)
+    do
+      local hdr = indent .. M._dpad("file", path_w) .. "  "
+                          .. M._dpad("export", name_w) .. "  " .. "kind"
+      push(hdr, 0, -1, "VallowKind", nil)
+    end
     for _, item in ipairs(items) do
       local rel  = M._truncate(item.relative_path or "", path_w)
       local name = item.name or ""
@@ -218,7 +259,7 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
   elseif cat_key == "duplicate_exports" then
     for _, item in ipairs(items) do
       local n = item.name or ""
-      push(indent .. n, #indent, #indent + #n, "VallowName", item)
+      push(indent .. n, #indent, #indent + #n, "VallowSymbol", item)
       for _, loc in ipairs(item.locations or {}) do
         local rp  = loc.relative_path or ""
         local ln  = loc.lnum and (":" .. loc.lnum) or ""
@@ -228,13 +269,55 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
     end
 
   elseif cat_key == "circular_deps" then
+    local function basename(p)
+      if type(p) ~= "string" or p == "" then return nil end
+      return p:match("([^/\\]+)$") or p
+    end
     for _, item in ipairs(items) do
-      local p = item.relative_path or ""
-      push(indent .. p, #indent, #indent + #p, "VallowPath", item)
+      local cycle = item.cycle or {}
+      -- Build chain from cycle array if it has at least 2 distinct entries
+      local chain
+      if #cycle >= 2 then
+        local parts = {}
+        for _, p in ipairs(cycle) do
+          local name = basename(p)
+          if name and name ~= "" then table.insert(parts, name) end
+        end
+        if #parts >= 2 then
+          table.insert(parts, parts[1])   -- close the loop visually
+          chain = table.concat(parts, " → ")
+        end
+      end
+      -- Fall back to just showing the entry file
+      if chain then
+        local row = indent .. chain
+        push(row, 0, 0, nil, item)
+        -- highlight filenames as VallowPath, " → " separators as VallowBorder
+        local sep  = " → "
+        local segs = vim.split(chain, sep, { plain = true })
+        local pos  = #indent
+        for i, seg in ipairs(segs) do
+          hl_last(pos, pos + #seg, "VallowPath")
+          pos = pos + #seg
+          if i < #segs then
+            -- " → ": dim the arrow so filenames stand out
+            hl_last(pos, pos + #sep, "NonText")
+            pos = pos + #sep
+          end
+        end
+      else
+        local row = indent .. (item.relative_path or item.path or "")
+        push(row, #indent, -1, "VallowPath", item)
+      end
     end
 
   elseif cat_key == "boundary_violations" then
     local path_w = 28
+    do
+      local hdr = indent .. M._dpad("file", path_w) .. "  "
+                          .. M._dpad("import", 22)   .. "  " .. "boundary"
+      push(hdr, 0, -1, "VallowKind", nil)
+    end
     for _, item in ipairs(items) do
       local p   = M._truncate(item.relative_path or "", path_w)
       local imp = M._truncate(item.import_path   or "", 22)
@@ -248,53 +331,244 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
     end
 
   elseif cat_key == "clone_groups" then
+    local sub = "        "  -- 8-space indent for location sub-rows
+
+    -- Pre-pass: compute actual display names and find max width
+    local function clone_disp(item)
+      local nm = item.name or ""
+      if nm:match("^dup:") then
+        local f = (item.locations or {})[1]
+        if f then
+          local rp = f.relative_path or f.path or ""
+          nm = rp:match("([^/\\]+)$") or nm
+        end
+      end
+      return nm
+    end
+    local name_col_w = 0
+    for _, it in ipairs(items) do
+      name_col_w = math.max(name_col_w, #clone_disp(it))
+    end
+    name_col_w = math.min(name_col_w, 28)
+
+    do
+      local hdr = indent .. M._dpad("name", name_col_w) .. "   "
+                          .. M._dpad("size", 7)          .. "   " .. "copies"
+      push(hdr, 0, -1, "VallowKind", nil)
+    end
     for _, item in ipairs(items) do
-      local name  = M._truncate(item.name or "", 22)
-      local parts = {}
-      if item.lines  then table.insert(parts, item.lines  .. " ln")  end
-      if item.tokens then table.insert(parts, item.tokens .. " tok") end
-      local n_inst = #(item.locations or {})
-      if n_inst > 0 then table.insert(parts, n_inst .. " inst") end
-      local meta = table.concat(parts, " · ")
-      local row  = "    " .. M._dpad(name, 22) .. "  " .. meta
-      -- jump to first instance on <CR>
-      local dest = item.locations and item.locations[1]
-      push(row, 4, 4 + #name, "VallowName",
-        dest and { path = dest.path, lnum = dest.lnum } or item)
+      local locs   = item.locations or {}
+      local n_inst = #locs
+      local first  = locs[1]
+
+      local disp = M._truncate(clone_disp(item), name_col_w)
+
+      -- Size: lines is the most meaningful metric
+      local size_s  = item.lines and (item.lines .. " ln") or ""
+      local size_n  = tonumber(item.lines) or 0
+      local size_hl = size_n >= 50 and "VallowSevWarn"
+                   or size_n >= 20 and "VallowSevHint"
+                   or "VallowKind"
+
+      -- Instance count: × prefix reads more naturally than "N inst"
+      local cnt_s  = n_inst > 0 and ("\xc3\x97" .. n_inst) or ""   -- × U+00D7
+      local cnt_hl = n_inst >= 5 and "VallowSevWarn"
+                  or n_inst >= 3 and "VallowSevHint"
+                  or "VallowKind"
+
+      -- Header row: name · size · count
+      local name_padded = M._dpad(disp, name_col_w)
+      local gap = "   "
+      local row = indent .. name_padded .. gap
+      local sz_pos = #row ; row = row .. M._dpad(size_s, 7) .. gap
+      local cn_pos = #row ; row = row .. cnt_s
+
+      push(row, 0, 0, nil, first and { path = first.path, lnum = first.lnum } or item)
+      hl_last(#indent, #indent + #disp, "VallowName")
+      if size_s ~= "" then hl_last(sz_pos, sz_pos + #size_s, size_hl) end
+      if cnt_s  ~= "" then hl_last(cn_pos, cn_pos + #cnt_s,  cnt_hl)  end
+
+      -- Location sub-rows — each clickable, this is what "inst" actually means
+      for _, loc in ipairs(locs) do
+        local rp  = M._truncate(loc.relative_path or "", win_width - #sub - 6)
+        local ln  = loc.lnum and (":" .. loc.lnum) or ""
+        local sub_row = sub .. rp .. ln
+        push(sub_row, #sub, #sub + #rp, "VallowPath",
+          { path = loc.path, lnum = loc.lnum })
+        if ln ~= "" then
+          hl_last(#sub + #rp, #sub + #rp + #ln, "VallowKind")
+        end
+      end
     end
 
   elseif cat_key == "health_complexity" then
+    -- Cyclomatic: industry thresholds 1-10 fine, 11-20 moderate, 21-50 high, >50 critical
+    -- Cognitive: tighter scale — SonarQube-ish: >7 hint, >15 warn, >30 error
+    local function cyc_hl(n)
+      n = tonumber(n) or 0
+      if n > 50 then return "VallowSevError"
+      elseif n > 20 then return "VallowSevWarn"
+      elseif n > 10 then return "VallowSevHint"
+      else return "VallowKind" end
+    end
+    local function cog_hl(n)
+      n = tonumber(n) or 0
+      if n > 30 then return "VallowSevError"
+      elseif n > 15 then return "VallowSevWarn"
+      elseif n >  7 then return "VallowSevHint"
+      else return "VallowKind" end
+    end
+
+    -- Pre-compute column widths for alignment
+    local cyc_col_w, cog_col_w, name_col_w = 0, 0, 0
+    for _, it in ipairs(items) do
+      if it.cyclomatic then cyc_col_w  = math.max(cyc_col_w,  #tostring(it.cyclomatic)) end
+      if it.cognitive  then cog_col_w  = math.max(cog_col_w,  #tostring(it.cognitive))  end
+      local nm = it.name == "<arrow>" and "λ" or (it.name or "")
+      name_col_w = math.max(name_col_w, #nm)
+    end
+    name_col_w = math.min(name_col_w, 18)
+    -- Cap path at 36 so it doesn't expand to fill wide panels
+    local path_w = math.min(36, math.max(20,
+      win_width - #indent - name_col_w - cyc_col_w - cog_col_w - 12))
+    -- Ensure metric columns are at least as wide as their header labels
+    cyc_col_w = math.max(cyc_col_w, 3)  -- "cyc"
+    cog_col_w = math.max(cog_col_w, 3)  -- "cog"
+
+    local gap = "   "
+
+    -- Dim column header so the two metric columns are self-documenting
+    do
+      local hdr = indent .. M._dpad("path", path_w) .. gap
+                          .. M._dpad("name", name_col_w) .. gap
+                          .. M._dpad("cyc",  cyc_col_w)  .. gap
+                          .. "cog"
+      push(hdr, 0, -1, "VallowKind", nil)
+    end
+
     for _, item in ipairs(items) do
-      local p    = M._truncate(item.relative_path or "", 28)
-      local name = M._truncate(item.name or "", 16)
-      local cyc  = item.cyclomatic and ("cyc:" .. item.cyclomatic) or ""
-      local cog  = item.cognitive  and ("cog:" .. item.cognitive)  or ""
-      local row  = indent .. M._dpad(p, 28) .. "  " .. M._dpad(name, 16) .. "  " .. cyc .. "  " .. cog
-      push(row, #indent, #indent + #p, "VallowPath", item)
-      local n0 = #indent + #M._dpad(p, 28) + 2
-      hl_last(n0, n0 + #name, "VallowName")
+      local p    = M._truncate(item.relative_path or "", path_w)
+      -- <arrow> = anonymous arrow function; λ is the universal shorthand
+      local name = item.name == "<arrow>" and "λ" or (item.name or "")
+      name = M._truncate(name, name_col_w)
+      local cyc_s = item.cyclomatic and tostring(item.cyclomatic) or ""
+      local cog_s = item.cognitive  and tostring(item.cognitive)  or ""
+
+      local p_padded    = M._dpad(p,    path_w)
+      local name_padded = M._dpad(name, name_col_w)
+      local cyc_padded  = M._dpad(cyc_s, cyc_col_w)
+
+      local row   = indent .. p_padded  .. gap
+      local nm_pos = #row ; row = row .. name_padded .. gap
+      local cy_pos = #row ; row = row .. cyc_padded  .. gap
+      local co_pos = #row ; row = row .. cog_s
+
+      push(row, 0, 0, nil, item)
+      hl_last(#indent,  #indent  + #p,    "VallowPath")
+      hl_last(nm_pos,   nm_pos   + #name, "VallowName")
+      if cyc_s ~= "" then hl_last(cy_pos, cy_pos + #cyc_s, cyc_hl(item.cyclomatic)) end
+      if cog_s ~= "" then hl_last(co_pos, co_pos + #cog_s, cog_hl(item.cognitive))  end
     end
 
   elseif cat_key == "health_hotspots" then
+    -- Pre-compute column widths and max score (for relative coloring) in one pass.
+    local max_score_num  = 0
+    local score_col_w, commits_col_w = 0, 0
+    for _, it in ipairs(items) do
+      local n = tonumber(it.score)
+      if n and n > max_score_num then max_score_num = n end
+      if it.score   ~= nil then score_col_w   = math.max(score_col_w,   #tostring(it.score))   end
+      if it.commits ~= nil then commits_col_w = math.max(commits_col_w, #tostring(it.commits)) end
+    end
+
+    local path_w = math.min(36, math.floor((win_width - #indent) * 0.55))
+    -- Ensure column widths fit their header labels
+    score_col_w   = math.max(score_col_w,   5)  -- "score"
+    commits_col_w = math.max(commits_col_w, 7)  -- "commits"
+    local gap    = "   "  -- 3-space column separator
+
+    do
+      local hdr = indent .. M._dpad("file",    path_w)       .. gap
+                          .. M._dpad("score",   score_col_w)  .. gap
+                          .. M._dpad("commits", commits_col_w) .. gap
+                          .. "trend"
+      push(hdr, 0, -1, "VallowKind", nil)
+    end
+
     for _, item in ipairs(items) do
-      local p    = M._truncate(item.relative_path or "", 32)
-      local info = ""
-      if item.score   then info = info .. "score:"   .. item.score end
-      if item.commits then
-        if info ~= "" then info = info .. "  " end
-        info = info .. "commits:" .. item.commits
+      local p         = M._truncate(item.relative_path or "", path_w)
+      local score_s   = item.score   ~= nil and tostring(item.score)   or ""
+      local commits_s = item.commits ~= nil and tostring(item.commits) or ""
+      local trend_s   = (item.trend and item.trend ~= "") and item.trend or ""
+
+      -- Score: relative to batch max so the gradient means something per-project
+      local score_hl = "VallowKind"
+      local sn = tonumber(item.score)
+      if sn and max_score_num > 0 then
+        local r = sn / max_score_num
+        if     r >= 0.7  then score_hl = "VallowSevError"
+        elseif r >= 0.35 then score_hl = "VallowSevWarn"
+        else                   score_hl = "VallowSevHint" end
       end
-      if item.trend and item.trend ~= "" then info = info .. "  " .. item.trend end
-      push(indent .. M._dpad(p, 32) .. "  " .. info,
-        #indent, #indent + #p, "VallowPath", item)
+
+      -- Trend: semantic direction coloring
+      local trend_hl = "VallowKind"
+      if     trend_s == "heating" then trend_hl = "VallowSevError"
+      elseif trend_s == "stable"  then trend_hl = "VallowSevWarn"
+      elseif trend_s == "cooling" then trend_hl = "VallowSevHint" end
+
+      -- Fixed-width columns so values line up regardless of digit count
+      local p_padded  = M._dpad(p, path_w)
+      local sc_padded = M._dpad(score_s,   score_col_w)
+      local cm_padded = M._dpad(commits_s, commits_col_w)
+
+      local row     = indent .. p_padded .. gap
+      local sc_pos  = #row ; row = row .. sc_padded  .. gap
+      local cm_pos  = #row ; row = row .. cm_padded  .. gap
+      local tr_pos  = #row ; row = row .. trend_s
+
+      push(row, 0, 0, nil, item)
+      hl_last(#indent,  #indent  + #p,         "VallowPath"  )
+      if score_s   ~= "" then hl_last(sc_pos, sc_pos + #score_s,   score_hl      ) end
+      if commits_s ~= "" then hl_last(cm_pos, cm_pos + #commits_s, "VallowCount" ) end
+      if trend_s   ~= "" then hl_last(tr_pos, tr_pos + #trend_s,   trend_hl      ) end
     end
 
   elseif cat_key == "health_targets" then
+    -- Map a priority value to a diagnostic highlight group.
+    -- Uses DiagnosticError/Warn/Hint — always themed by the active colorscheme.
+    -- Refactoring is advisory — no red. Scale is warn (notable) → hint (mild) → dim.
+    local function pri_hl(item)
+      local pri = item.priority
+      if type(pri) == "number" then
+        if     pri >= 7 then return "VallowSevWarn"
+        elseif pri >= 4 then return "VallowSevHint"
+        else                  return "VallowKind"   end
+      end
+      if type(pri) == "string" then
+        local s = pri:lower()
+        if     s == "high" or s == "critical"           then return "VallowSevWarn"
+        elseif s == "medium" or s == "moderate"         then return "VallowSevHint"
+        elseif s == "low"    or s == "minor"            then return "VallowKind"   end
+      end
+      -- Fallback: extract percentage from "reduce surface area (75% dead)" style text
+      local pct = tonumber((item.recommendation or ""):match("%((%d+)%%"))
+      if pct then
+        if     pct >= 75 then return "VallowSevWarn"
+        elseif pct >= 40 then return "VallowSevHint"
+        else                  return "VallowKind"   end
+      end
+      return "VallowKind"
+    end
+
+    local extra = "        "  -- 8 spaces: one extra level of indent
     for _, item in ipairs(items) do
-      local p   = M._truncate(item.relative_path or "", 30)
-      local rec = M._truncate(item.recommendation or item.category or "", 28)
-      push(indent .. M._dpad(p, 30) .. "  " .. rec,
-        #indent, #indent + #p, "VallowPath", item)
+      local p   = M._truncate(item.relative_path or "", win_width - #indent - 2)
+      local rec = item.recommendation or item.category or ""
+      push(indent .. p, #indent, #indent + #p, "VallowPath", item)
+      if rec ~= "" then
+        push(extra .. rec, #extra, -1, pri_hl(item), item)
+      end
     end
   end
 end
