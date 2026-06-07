@@ -1,82 +1,38 @@
 # vallow.nvim
 
-A code quality panel for Neovim. Surfaces unused exports, unused files,
-duplicate code, dependency issues, complexity hotspots, and architecture
-violations in a fast, navigable split — with one keypress to jump to any issue.
+fallow for Neovim. See your unused code, duplicates, and health in a native split.
 
-Powered by [fallow](https://github.com/fallow-rs/fallow) — a zero-config,
-sub-second static analysis engine for JS/TS.
+Powered by [fallow](https://github.com/fallow-rs/fallow), a sub-second static analysis
+engine for JS/TS. No tree-sitter, no LSP, no config needed on the Neovim side.
 
 ```
   VALLOW
-  ──────────────────────────────────────────────────────────────────
-  ▼ UNUSED CODE                                                   24
-    ▼ 󰘍 Unused Exports                                            7
+  ─────────────────────────────────────────────────────────────
+  ▼ UNUSED CODE                                              24
+    ▼ 󰘍 Unused Exports                                        7
         src/utils.ts            formatDate          value
         src/utils.ts            oldHelper           value
         src/types.ts            LegacyUser          type
-      ▶ 󰈔 Unused Files                                            3
-      ▶ T  Unused Types                                           5
-      ▶ •  Unused Members                                         9
-  ▼ ISSUES                                                         2
-      ▶ 󰌶 Unresolved Imports                                      1
-      ▶ 󰑷 Circular Deps                                           1
-  ──────────────────────────────────────────────────────────────────
+      ▶ 󰈔 Unused Files                                        3
+      ▶ T  Unused Types                                       5
+      ▶ •  Unused Members                                     9
+  ▼ ISSUES                                                     2
+    ▶ 󰌶 Unresolved Imports                                    1
+    ▶ 󰑷 Circular Deps                                         1
+  ─────────────────────────────────────────────────────────────
   26 issues  312ms
 ```
 
----
-
 ## Requirements
 
-- **Neovim** >= 0.10
-- **[fallow](https://github.com/fallow-rs/fallow)** CLI — the analysis engine
-- A **TypeScript or JavaScript** project with a `package.json`
-- A **[Nerd Font](https://www.nerdfonts.com/)** for category icons (optional)
+- Neovim >= 0.10
+- [fallow](https://github.com/fallow-rs/fallow) CLI
+- A TypeScript or JavaScript project with a `package.json`
+- A [Nerd Font](https://www.nerdfonts.com/) if you want the icons (optional)
 
----
+## Install
 
-## Install fallow
-
-vallow.nvim is a UI wrapper — fallow does the actual analysis. Install it once:
-
-```sh
-# npm (global) — recommended
-npm install -g fallow
-
-# npm (local to your project)
-npm install --save-dev fallow
-
-# pnpm
-pnpm add -g fallow
-
-# bun
-bun add -g fallow
-
-# Cargo
-cargo install fallow
-```
-
-If installed locally, point vallow at the local binary:
-
-```lua
-require("vallow").setup({
-  fallow_cmd = "./node_modules/.bin/fallow",
-})
-```
-
-Verify it works:
-
-```sh
-fallow --version
-fallow --format json --quiet | head -20
-```
-
----
-
-## Installation
-
-### [lazy.nvim](https://github.com/folke/lazy.nvim) (recommended)
+### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
@@ -102,104 +58,92 @@ use {
 }
 ```
 
----
+## Install fallow
 
-## Quick start
-
-Open any TypeScript or JavaScript project, then:
-
-```
-:Vallow
+```sh
+npm install -g fallow      # global (recommended)
+npm install --save-dev fallow  # local to project
+cargo install fallow       # or via Cargo
 ```
 
-The panel opens, runs `fallow` in the background, and renders results.
-Press `<CR>` on any issue to jump directly to the file and line.
+Local install:
 
----
+```lua
+require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
+```
 
-## Commands
+## Usage
 
-| Command | Description |
+| Command | What it does |
 |---|---|
-| `:Vallow` | Toggle the panel open / closed |
-| `:VallowRefresh` | Re-run fallow and update the panel |
-| `:VallowSearch` | Fuzzy search all findings (telescope / fzf-lua / vim.ui.select) |
+| `:Vallow` | Toggle the panel |
+| `:VallowRefresh` | Re-run fallow and refresh |
+| `:VallowSearch` | Search findings with telescope / fzf-lua / vim.ui.select |
 
----
+Press `<CR>` on any issue to jump to the file and line.
 
 ## Panel keymaps
 
+All remappable via `setup({ keymaps = ... })`.
+
 | Key | Action |
 |---|---|
-| `L` / `H` | Next / previous tab (cycle sections) |
-| `<CR>` | Jump to the issue (current window) |
-| `o` | Jump in a horizontal split |
-| `v` | Jump in a vertical split |
-| `t` | Jump in a new tab |
-| `<Tab>` / `za` | Toggle fold under cursor |
+| `<CR>` | Jump to file (edit in previous window) |
+| `o` | Jump in horizontal split |
+| `v` | Jump in vertical split |
+| `t` | Jump in new tab |
+| `L` / `H` | Next / previous section |
+| `]c` / `[c` | Next / previous section |
+| `<Tab>` / `za` | Toggle fold |
 | `zo` / `zc` | Open / close fold |
 | `zR` / `zM` | Open / close all folds |
-| `r` | Re-run fallow (refresh) |
-| `q` | Close the panel |
-| `]c` / `[c` | Jump to next / previous section |
-| `f` | Filter findings by path or name |
+| `f` | Filter by path or name |
 | `F` | Clear filter |
-| `gf` | Fuzzy search all findings |
-| `Q` | Send visible findings to quickfix |
-| `y` | Yank path:line of item under cursor |
+| `gf` | Open picker (fuzzy search all findings) |
+| `P` | Peek at file in floating window |
+| `%` | Filter to current buffer's file |
+| `Q` | Send to quickfix |
+| `y` | Yank path:line |
+| `r` | Refresh |
+| `q` | Close |
 | `?` | Show keymap help |
-
-All keymaps are configurable — see [Configuration](#configuration).
-
----
 
 ## Panel structure
 
-Findings are organized into sections. Only sections with issues are shown.
+Sections and categories shown only when they have findings.
 
 | Section | Categories |
 |---|---|
-| **UNUSED CODE** | Unused Exports, Unused Files, Unused Types, Unused Members, Dependencies, Unlisted Deps |
+| **UNUSED CODE** | Unused Exports, Types, Members, Files, Dependencies, Unlisted Deps |
 | **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports |
 | **DUPLICATES** | Clone Groups |
-| **HEALTH** | Complexity, Hotspot Candidates, Refactoring |
-| **ARCHITECTURE** | Boundary Violations |
+| **HEALTH** | Complexity, Hotspots, Refactoring Targets |
 
-Severity is color-coded: errors (red), warnings (yellow), hints (grey).
-
----
+Severity is color-coded: errors red, warnings yellow, hints grey.
 
 ## Configuration
 
-Call `setup()` with any options you want to override. Everything has a default.
-
 ```lua
 require("vallow").setup({
-  -- fallow binary — change if not in PATH or using a local install
   fallow_cmd  = "fallow",
-  fallow_args = {},  -- extra CLI flags, e.g. {"--score", "--hotspots"}
+  fallow_args = {},  -- extra flags, e.g. {"--score", "--hotspots"}
 
   window = {
     position = "right",  -- "bottom" | "top" | "left" | "right"
-    size     = 0.5,      -- fraction of editor width (left/right) or height (top/bottom)
+    size     = 0.5,
   },
 
-  -- Max items shown per category before a "N more…" row appears.
-  -- Press <Tab> or <CR> on the row to expand.
-  max_items = 30,
+  max_items = 30,  -- items per category before "N more..." expands
 
-  -- Inline diagnostics in open buffers (like LSP hints)
   diagnostics = {
     enabled  = true,
     severity = vim.diagnostic.severity.HINT,
   },
 
-  -- Statusline integration (see below)
   statusline = {
-    prefix = "vallow ",  -- change to " " for a Nerd Font icon
+    prefix = "vallow ",  -- " " for a Nerd Font icon
   },
 
-  -- Keymaps inside the panel buffer
   keymaps = {
     close        = "q",
     jump         = "<CR>",
@@ -216,100 +160,54 @@ require("vallow").setup({
 })
 ```
 
-### Local fallow install
-
-```lua
-require("vallow").setup({
-  fallow_cmd = "./node_modules/.bin/fallow",
-})
-```
-
-### Statusline integration
+### Statusline
 
 ```lua
 -- lualine
 require("lualine").setup({
   sections = {
-    lualine_x = {
-      { require("vallow").statusline, color = { fg = "#f9c74f" } },
-    },
+    lualine_x = { { require("vallow").statusline, color = { fg = "#f9c74f" } } },
   },
 })
 
--- raw statusline
+-- raw
 vim.o.statusline = "%{%v:lua.require('vallow').statusline()%}"
 ```
 
-Displays `vallow 42` when issues exist, `vallow ✓` when clean, empty when not run.
-Change the prefix via `setup({ statusline = { prefix = " " } })`.
+Shows `vallow 42` when issues exist, `vallow ✓` when clean, empty when not run.
 
----
+### Adding custom sections
 
-## Health check
-
-```
-:checkhealth vallow
-```
-
-```
-vallow.nvim
-  OK  Neovim 0.10
-  OK  fallow: fallow 2.89.0
-  OK  package.json: ~/projects/my-app/package.json
-```
-
-Common issues it catches: `fallow` not in PATH, no `package.json` reachable
-from the current directory.
-
----
-
-## Highlight groups
-
-vallow.nvim links all groups to standard Neovim groups by default,
-so they work with any colorscheme.
+Add a section and its categories in your setup:
 
 ```lua
-vim.api.nvim_set_hl(0, "VallowHeader",   { fg = "#bb9af7", bold = true })
-vim.api.nvim_set_hl(0, "VallowPath",     { fg = "#7aa2f7" })
-vim.api.nvim_set_hl(0, "VallowName",     { fg = "#9ece6a", bold = true })
-vim.api.nvim_set_hl(0, "VallowSevError", { fg = "#f7768e" })
-vim.api.nvim_set_hl(0, "VallowSevWarn",  { fg = "#e0af68" })
-vim.api.nvim_set_hl(0, "VallowSevHint",  { fg = "#565f89" })
+require("vallow").setup({
+  sections = {
+    unused_code  = { label = "UNUSED CODE",  order = 1 },
+    issues       = { label = "ISSUES",       order = 2 },
+    duplicates   = { label = "DUPLICATES",   order = 3 },
+    health       = { label = "HEALTH",       order = 4 },
+    architecture = { label = "ARCHITECTURE", order = 5 },
+  },
+  categories = {
+    -- your existing categories...
+    boundary_violations = {
+      icon = "󰑷", label = "Boundary Violations",
+      section = "architecture", order = 1, severity = "error",
+    },
+  },
+})
 ```
 
-| Group | Default | Used for |
-|---|---|---|
-| `VallowHeader` | `Title` | Panel title |
-| `VallowSection` | `Title` bold | Section headers (UNUSED CODE, ISSUES…) |
-| `VallowBorder` | `FloatBorder` | Separator lines |
-| `VallowPath` | `Directory` | File paths |
-| `VallowName` | `Function` | Export / symbol names |
-| `VallowKind` | `Comment` | Kind labels (`value`, `type`) |
-| `VallowCount` | `Special` | Section issue counts |
-| `VallowFooter` | `Comment` | Footer (total + timing) |
-| `VallowLoading` | `WarningMsg` | "Analyzing…" state |
-| `VallowError` | `DiagnosticError` | Error state (fallow not found) |
-| `VallowSevError` | `DiagnosticError` | Category icon/count — error severity |
-| `VallowSevWarn` | `DiagnosticWarn` | Category icon/count — warn severity |
-| `VallowSevHint` | `DiagnosticHint` | Category icon/count — hint severity |
+### Configuring fallow
 
----
-
-## Configuring fallow
-
-vallow.nvim passes your project root to fallow and lets it handle the rest.
-fallow reads `.fallowrc.json` (or `.fallowrc.jsonc` / `fallow.toml`) from
-your project root.
-
-Create one with:
+vallow passes the project root to fallow. Configure fallow via `.fallowrc.json`:
 
 ```sh
 fallow init
 ```
 
-Common options:
-
-```json
+```jsonc
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": ["src/index.ts"],
@@ -323,86 +221,75 @@ Common options:
 }
 ```
 
-See the [fallow docs](https://github.com/fallow-rs/fallow) for the full
-reference — workspace/monorepo support, architecture boundaries, complexity
-thresholds, and 118 framework plugins (Next.js, Nuxt, Remix, Vite, etc).
-
-### Suppression comments
-
-Suppress specific findings inline without touching config:
+Suppress findings inline:
 
 ```ts
 // fallow-ignore-next-line unused-export
 export function keepThisPublic() {}
-
-// fallow-ignore-next-line unused-export, unused-type
-export type LegacyShape = { id: string }
-
-// fallow-ignore-file  ← suppress all findings in this file
 ```
 
----
+## Highlight groups
 
-## How it works
+All groups link to standard Neovim groups and work with any colorscheme.
 
-vallow.nvim is a thin UI wrapper. It shells out to fallow, parses the JSON
-output, and renders it in a Neovim scratch buffer. No tree-sitter, no LSP,
-no language parsing on the Neovim side — fallow handles all of that.
+| Group | Default | Used for |
+|---|---|---|
+| `VallowHeader` | `Title` | Panel title |
+| `VallowSection` | `@keyword` | Section headers (UNUSED CODE, etc.) |
+| `VallowBorder` | `FloatBorder` | Separator lines |
+| `VallowPath` | `@string` | File paths |
+| `VallowName` | `@function` | Export / symbol names |
+| `VallowSymbol` | `@type` | Severity icons |
+| `VallowKind` | `Comment` | Kind labels |
+| `VallowCount` | `@number` | Issue counts |
+| `VallowFooter` | `Comment` | Footer |
+| `VallowLoading` | `WarningMsg` | Loading state |
+| `VallowError` | `DiagnosticError` | Error state |
+| `VallowSevError` | `DiagnosticError` | Error severity |
+| `VallowSevWarn` | `DiagnosticWarn` | Warning severity |
+| `VallowSevHint` | `DiagnosticHint` | Hint severity |
+| `VallowTabActive` | `TabLineSel` | Active section tab |
+| `VallowTabInactive` | `TabLine` | Inactive section tab |
+| `VallowTabSep` | `TabLineFill` | Tab separator |
 
+Override in your config:
+
+```lua
+vim.api.nvim_set_hl(0, "VallowHeader", { fg = "#bb9af7", bold = true })
 ```
-:Vallow
-  └─ panel/init.lua        open split, show "Analyzing…"
-       └─ runner.lua       vim.fn.jobstart("fallow --format json")  [async]
-            └─ on_exit     JSON decode → normalize → output contract
-                 └─ panel/render.lua    write lines + extmarks to buffer
-                      └─ panel/actions.lua
-                           <CR>   wincmd p → edit path → cursor → flash
-                           r      re-run runner
-                           q      close window
-```
-
-The panel buffer (`buftype=nofile`) never modifies your files.
-
----
 
 ## Contributing
-
-Issues and PRs welcome.
 
 ```sh
 git clone https://github.com/xeind/vallow.nvim
 cd vallow.nvim
 ```
 
-Point lazy.nvim at your local clone for development:
+Point lazy.nvim at your clone for development:
 
 ```lua
 { dir = "~/path/to/vallow.nvim", opts = {} }
 ```
 
-File layout:
-
 ```
 lua/vallow/
-  init.lua          Public API: setup, toggle, open, close, refresh, statusline
+  init.lua          Public API
   config.lua        Defaults + deep merge
-  health.lua        :checkhealth vallow
-  runner.lua        Async fallow execution + JSON normalizer
-  labels.lua        Shared bucket key → human label map
-  diagnostics.lua   Inline LSP-style diagnostics from findings
-  picker.lua        Telescope / fzf-lua / vim.ui.select integration
+  health.lua        :checkhealth
+  runner.lua        Async fallow -> output contract
+  labels.lua        Shared label map
+  diagnostics.lua   LSP-style inline diagnostics
+  picker.lua        Telescope / fzf-lua / vim.ui.select
   panel/
-    init.lua        Window lifecycle + state
-    window.lua      Split buffer creation
-    render.lua      Tree rendering + extmarks + severity highlights
-    actions.lua     Keymaps: jump, fold, filter, quickfix, yank
-    highlights.lua  Highlight group definitions
-    help.lua        Floating keymap reference popup
+    init.lua        Window lifecycle
+    window.lua      Split buffer
+    render.lua      Rendering + extmarks
+    actions.lua     Keymaps
+    highlights.lua  Highlight groups
+    help.lua        Keymap reference popup
 plugin/
-  vallow.lua        :Vallow / :VallowRefresh / :VallowSearch commands
+  vallow.lua        :Vallow / :VallowRefresh / :VallowSearch
 ```
-
----
 
 ## License
 
