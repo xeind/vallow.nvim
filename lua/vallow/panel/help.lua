@@ -9,7 +9,7 @@ local SECTIONS = {
     { key = "]c / [c",    desc = "next / prev section"     },
   }},
   { title = "Folds", keys = {
-    { key = "za / <Tab>", desc = "toggle fold"             },
+    { key = "za",         desc = "toggle fold"             },
     { key = "zo",         desc = "open fold"               },
     { key = "zc",         desc = "close fold"              },
     { key = "zR",         desc = "open all"                },
@@ -21,6 +21,8 @@ local SECTIONS = {
     { key = "gf",         desc = "open picker"             },
   }},
   { title = "Actions", keys = {
+    { key = "P",          desc = "peek code in float"      },
+    { key = "%",          desc = "filter: current file"    },
     { key = "r",          desc = "refresh"                 },
     { key = "Q",          desc = "send to quickfix list"   },
     { key = "y",          desc = "yank path:line"          },

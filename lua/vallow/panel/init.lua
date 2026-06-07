@@ -7,6 +7,7 @@ M.state = {
   current_section = nil,  -- nil = ALL tabs visible
 }
 
+
 M.open = function()
   if M._is_open() then
     vim.api.nvim_set_current_win(M.state.win)

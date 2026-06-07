@@ -12,7 +12,9 @@ M.setup = function(buf)
   map(cfg.refresh,      function() panel.refresh() end)
   map(cfg.next_tab,     function() M.switch_tab(buf, 1)  end)
   map(cfg.prev_tab,     function() M.switch_tab(buf, -1) end)
-  map(cfg.toggle_fold,  function() M.toggle_fold(buf) end)
+  if cfg.toggle_fold and cfg.toggle_fold ~= "" then
+    map(cfg.toggle_fold, function() M.toggle_fold(buf) end)
+  end
   map(cfg.next_section, function() M.move_section(buf, 1) end)
   map(cfg.prev_section, function() M.move_section(buf, -1) end)
   map(cfg.filter,       function() M.filter(buf) end)
@@ -35,6 +37,8 @@ M.setup = function(buf)
   -- Actions
   map("Q", function() M.send_to_qf(buf) end)
   map("y", function() M.yank_path(buf) end)
+  map("P", function() M.peek(buf) end)
+  map("%", function() M.filter_current_buf(buf) end)
   map("?", function() require("vallow.panel.help").open() end)
 end
 
@@ -327,6 +331,112 @@ M.clear_filter = function(buf)
   if (vim.b[buf].vallow_filter or "") == "" then return end
   vim.b[buf].vallow_filter = ""
   local panel = require("vallow.panel")
+  if panel.state.results then
+    require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
+  end
+end
+
+-- ── Peek float ───────────────────────────────────────────────────────
+
+M.peek = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then return end
+
+  local path = item.path
+  if not path or path == "" then return end
+  local lnum = math.max(1, item.lnum or 1)
+  local col  = math.max(0, item.col  or 0)
+
+  -- Load the target file into a buffer (reuse if already loaded)
+  local fbuf = vim.fn.bufadd(path)
+  vim.fn.bufload(fbuf)
+
+  local panel_win = require("vallow.panel").state.win
+  local pw = panel_win and vim.api.nvim_win_is_valid(panel_win)
+    and vim.api.nvim_win_get_width(panel_win) or 80
+
+  -- Float fills the editor except for the panel column
+  local total_w = vim.o.columns
+  local float_w = math.max(40, total_w - pw - 4)
+  local float_h = math.floor(vim.o.lines * 0.6)
+  local float_c = 0  -- left edge (panel is on the right)
+
+  -- If panel is on the left, put float to its right
+  if panel_win and vim.api.nvim_win_is_valid(panel_win) then
+    local pc = vim.api.nvim_win_get_position(panel_win)[2]
+    float_c = pc == 0 and pw + 1 or 0
+  end
+
+  local fwin = vim.api.nvim_open_win(fbuf, false, {
+    relative  = "editor",
+    row       = 1,
+    col       = float_c,
+    width     = float_w,
+    height    = float_h,
+    style     = "minimal",
+    border    = "rounded",
+    title     = " " .. (item.relative_path or path) .. ":" .. lnum .. " ",
+    title_pos = "center",
+  })
+
+  vim.wo[fwin].cursorline  = true
+  vim.wo[fwin].number      = true
+  vim.wo[fwin].signcolumn  = "no"
+  vim.wo[fwin].foldcolumn  = "0"
+
+  pcall(vim.api.nvim_win_set_cursor, fwin, { lnum, col })
+  vim.api.nvim_win_call(fwin, function() vim.cmd("normal! zz") end)
+
+  -- Highlight the issue line with a subtle Search mark
+  local ns = vim.api.nvim_create_namespace("vallow_peek")
+  vim.api.nvim_buf_add_highlight(fbuf, ns, "CurSearch", lnum - 1, 0, -1)
+
+  local function close()
+    pcall(vim.api.nvim_buf_clear_namespace, fbuf, ns, 0, -1)
+    pcall(vim.api.nvim_win_close, fwin, true)
+  end
+
+  -- Close on <Esc>, P, or any cursor movement in the panel
+  for _, key in ipairs({ "<Esc>", "P" }) do
+    vim.keymap.set("n", key, close, { buffer = buf, once = true, nowait = true, silent = true })
+  end
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = buf, once = true,
+    callback = close,
+  })
+end
+
+-- ── Current-buffer filter ─────────────────────────────────────────────
+
+M.filter_current_buf = function(buf)
+  local panel = require("vallow.panel")
+
+  -- Find the path of the most recent non-panel buffer
+  local target_path
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local wbuf = vim.api.nvim_win_get_buf(win)
+    if wbuf ~= buf and vim.bo[wbuf].filetype ~= "vallow" then
+      target_path = vim.api.nvim_buf_get_name(wbuf)
+      break
+    end
+  end
+  if not target_path or target_path == "" then return end
+
+  -- Strip repo root to get the relative path used in findings
+  local root = panel.state.results and panel.state.results.repo_root
+  local rel  = root
+    and target_path:gsub("^" .. vim.pesc(root) .. "/", "")
+    or  vim.fn.fnamemodify(target_path, ":.")
+
+  -- Toggle: if already filtering this file, clear it
+  if (vim.b[buf].vallow_filter or "") == rel then
+    vim.b[buf].vallow_filter = ""
+    vim.notify("vallow: filter cleared", vim.log.levels.INFO)
+  else
+    vim.b[buf].vallow_filter = rel
+    vim.notify("vallow: filter → " .. rel, vim.log.levels.INFO)
+  end
+
   if panel.state.results then
     require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
   end
