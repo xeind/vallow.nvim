@@ -13,11 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: selene (Lua linter)
-        uses: NTBBloodbath/selene-action@v1.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --display-style=quiet lua/
+      - name: Install luacheck
+        run: |
+          sudo apt-get install -y luarocks lua5.3 2>/dev/null
+          sudo luarocks install luacheck
+
+      - name: luacheck
+        run: |
+          luacheck lua/ plugin/ \
+            --globals vim \
+            --no-max-line-length \
+            --no-unused-args \
+            --no-redefined
 
       - name: stylua (format check)
         uses: JohnnyMorganz/stylua-action@v4
