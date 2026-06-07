@@ -287,6 +287,7 @@ M._normalize = function(raw, root)
       path = v.path or "",
       relative_path = rel(v.path),
       lnum = v.line or 1,
+      actions = v.actions,
     })
   end
   for _, v in ipairs(check.unlisted_dependencies or {}) do
@@ -295,6 +296,7 @@ M._normalize = function(raw, root)
       path = v.path or "",
       relative_path = rel(v.path),
       lnum = v.line or 1,
+      actions = v.actions,
     })
   end
   findings.unresolved_imports.count = #findings.unresolved_imports.items
