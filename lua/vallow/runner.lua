@@ -21,6 +21,15 @@ M.run = function(callback)
   local stdout, stderr = {}, {}
 
   local cmd = { cfg.fallow_cmd, "--format", "json", "--quiet" }
+  -- Add health flags automatically when "health" is in analyses
+  for _, a in ipairs(cfg.analyses or { "dead-code", "dupes", "health" }) do
+    if a == "health" then
+      table.insert(cmd, "--score")
+      table.insert(cmd, "--hotspots")
+      table.insert(cmd, "--targets")
+      break
+    end
+  end
   for _, a in ipairs(cfg.fallow_args or {}) do table.insert(cmd, a) end
 
   vim.fn.jobstart(cmd, {
@@ -53,7 +62,22 @@ M.run = function(callback)
 end
 
 M._run_separate = function(gen, root, cfg, callback)
-  local results, pending = {}, 2
+  local analyses = cfg.analyses or { "dead-code", "dupes", "health" }
+  local jobs = {}
+  for _, a in ipairs(analyses) do
+    if a == "dead-code" then
+      jobs[#jobs + 1] = { key = "dead_code", cmd = { cfg.fallow_cmd, "dead-code", "--format", "json", "--quiet" } }
+    elseif a == "dupes" then
+      jobs[#jobs + 1] = { key = "dupes",     cmd = { cfg.fallow_cmd, "dupes",     "--format", "json", "--quiet" } }
+    elseif a == "health" then
+      jobs[#jobs + 1] = { key = "health",    cmd = { cfg.fallow_cmd, "health",    "--format", "json", "--quiet",
+                                                      "--score", "--hotspots", "--targets" } }
+    end
+  end
+
+  if #jobs == 0 then callback({ findings = M._empty_findings() }); return end
+
+  local results, pending = {}, #jobs
   local function collect(key)
     return function(ok, data)
       results[key] = { ok = ok, data = data }
@@ -66,8 +90,10 @@ M._run_separate = function(gen, root, cfg, callback)
       end
     end
   end
-  M._job({ cfg.fallow_cmd, "dead-code", "--format", "json", "--quiet" }, root, collect("dead_code"))
-  M._job({ cfg.fallow_cmd, "dupes",     "--format", "json", "--quiet" }, root, collect("dupes"))
+
+  for _, job in ipairs(jobs) do
+    M._job(job.cmd, root, collect(job.key))
+  end
 end
 
 M._job = function(cmd, cwd, callback)
@@ -136,6 +162,7 @@ M._normalize = function(raw, root)
       path = item.path or "", relative_path = rel(item.path),
       lnum = item.line or 1, col = item.col or 0,
       name = name, kind = kind,
+      actions = item.actions,
     })
   end
   for _, v in ipairs(check.unused_exports      or {}) do push_export(v, "value")  end
@@ -340,6 +367,10 @@ M._merge_separate = function(raw, root)
   if raw.dupes and raw.dupes.ok then
     merged.duplication = raw.dupes.data
     merged.elapsed_ms  = merged.elapsed_ms + (raw.dupes.data.elapsed_ms or 0)
+  end
+  if raw.health and raw.health.ok then
+    merged.health     = raw.health.data
+    merged.elapsed_ms = merged.elapsed_ms + (raw.health.data.elapsed_ms or 0)
   end
   local result = M._normalize(merged, root)
   if raw.dead_code and not raw.dead_code.ok then result.error = raw.dead_code.data end

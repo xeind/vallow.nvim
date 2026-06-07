@@ -2,7 +2,11 @@ local M = {}
 
 M.defaults = {
   fallow_cmd  = "fallow",
-  fallow_args = {},  -- extra args, e.g. {"--score", "--hotspots", "--targets"}
+  fallow_args = {},  -- extra CLI args forwarded verbatim
+
+  -- Which analyses to run. Remove entries to skip them entirely.
+  -- "health" automatically adds --score --hotspots --targets to fallow.
+  analyses = { "dead-code", "dupes", "health" },
 
   statusline = {
     prefix = "vallow ",  -- change to " " for Nerd Font icon
@@ -77,7 +81,8 @@ M.options = {}
 local function deep_merge(target, source)
   local result = vim.deepcopy(target)
   for k, v in pairs(source or {}) do
-    if type(v) == "table" and type(result[k]) == "table" then
+    -- Arrays (sequential tables) are replaced wholesale, not merged.
+    if type(v) == "table" and type(result[k]) == "table" and v[1] == nil and next(v) ~= nil then
       result[k] = deep_merge(result[k], v)
     else
       result[k] = v
