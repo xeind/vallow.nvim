@@ -213,7 +213,7 @@ M._normalize = function(raw, root)
 
   -- unused_exports[], unused_types[], unused_enum_members[], unused_class_members[]
   local function push_export(item, default_kind)
-    local name = item.export_name or item.exportName or ""
+    local name = item.export_name or item.exportName or item.member_name or item.memberName or item.name or ""
     local kind = default_kind
     if item.kind == "unused-type" or item.isTypeOnly or item.is_type_only then
       kind = "type"
