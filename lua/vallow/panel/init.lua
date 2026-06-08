@@ -40,7 +40,20 @@ M.open = function()
     end,
   })
 
-  M.refresh()
+  if M.state.results then
+    -- Results already cached (prefetched) — render immediately, then refresh silently
+    local render = require("vallow.panel.render")
+    render.render(M.state.buf, M.state.results, M.state.win)
+    require("vallow.panel.tabs").set_winbar(
+      M.state.win,
+      M.state.current_section,
+      M.state.results,
+      require("vallow.config").get()
+    )
+    M._bg_refresh()
+  else
+    M.refresh()
+  end
 end
 
 M.close = function()
@@ -82,6 +95,33 @@ M.refresh = function()
       )
     end
     -- Push findings as inline diagnostics to open buffers
+    require("vallow.diagnostics").apply(results.findings)
+  end)
+end
+
+-- Silent background run — updates results and re-renders if panel is open.
+-- Used when opening with cached results (stale-while-revalidate).
+M._bg_refresh = function()
+  require("vallow.runner").run(function(results)
+    M.state.results = results
+    if M._is_open() then
+      require("vallow.panel.render").render(M.state.buf, results, M.state.win)
+      require("vallow.panel.tabs").set_winbar(
+        M.state.win,
+        M.state.current_section,
+        results,
+        require("vallow.config").get()
+      )
+    end
+    require("vallow.diagnostics").apply(results.findings)
+  end)
+end
+
+-- Run fallow in the background without opening the panel.
+-- Called on startup so the first open is instant.
+M.prefetch = function()
+  require("vallow.runner").run(function(results)
+    M.state.results = results
     require("vallow.diagnostics").apply(results.findings)
   end)
 end

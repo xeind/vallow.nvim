@@ -21,6 +21,10 @@ M.refresh = function()
   require("vallow.panel").refresh()
 end
 
+M.prefetch = function()
+  require("vallow.panel").prefetch()
+end
+
 -- Open the panel (if not open) and filter findings to the current file.
 -- Bind this to whatever key you like:
 --   vim.keymap.set("n", "%", require("vallow").filter_current_file)

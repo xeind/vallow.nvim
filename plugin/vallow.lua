@@ -4,6 +4,7 @@ if vim.v.vim_did_enter == 0 then
     once = true,
     callback = function()
       require("vallow").setup()
+      require("vallow").prefetch()
     end,
   })
 end
@@ -18,9 +19,9 @@ end, {})
 
 vim.api.nvim_create_user_command("VallowSearch", function()
   local results = require("vallow.panel").state.results
-  if not results then
-    vim.notify("vallow: run :Vallow first", vim.log.levels.WARN)
+  if not results or results._loading then
+    vim.notify("vallow: still analyzing, try again in a moment", vim.log.levels.WARN)
     return
   end
   require("vallow.picker").open(results)
-end, { desc = "Search vallow findings with telescope/fzf-lua" })
+end, { desc = "Search vallow findings with snacks/telescope/fzf-lua" })
