@@ -146,6 +146,10 @@ require("vallow").setup({
     pick         = "gf",
   },
 })
+
+-- All highlight groups (VallowHeader, VallowPath, VallowName, VallowSevError, …)
+-- link to standard Neovim groups and work with any colorscheme. Override as needed:
+vim.api.nvim_set_hl(0, "VallowHeader", { fg = "#bb9af7", bold = true })
 ```
 
 ### Statusline
@@ -193,35 +197,6 @@ Suppress findings inline:
 export function keepThisPublic() {}
 ```
 
-## Highlight groups
-
-All groups link to standard Neovim groups and work with any colorscheme.
-
-| Group | Default | Used for |
-|---|---|---|
-| `VallowHeader` | `Title` | Panel title |
-| `VallowSection` | `@keyword` | Section headers (UNUSED CODE, etc.) |
-| `VallowBorder` | `FloatBorder` | Separator lines |
-| `VallowPath` | `@string` | File paths |
-| `VallowName` | `@function` | Export / symbol names |
-| `VallowSymbol` | `@type` | Severity icons |
-| `VallowKind` | `Comment` | Kind labels |
-| `VallowCount` | `@number` | Issue counts |
-| `VallowFooter` | `Comment` | Footer |
-| `VallowLoading` | `WarningMsg` | Loading state |
-| `VallowError` | `DiagnosticError` | Error state |
-| `VallowSevError` | `DiagnosticError` | Error severity |
-| `VallowSevWarn` | `DiagnosticWarn` | Warning severity |
-| `VallowSevHint` | `DiagnosticHint` | Hint severity |
-| `VallowTabActive` | `TabLineSel` | Active section tab |
-| `VallowTabInactive` | `TabLine` | Inactive section tab |
-| `VallowTabSep` | `TabLineFill` | Tab separator |
-
-Override in your config:
-
-```lua
-vim.api.nvim_set_hl(0, "VallowHeader", { fg = "#bb9af7", bold = true })
-```
 
 ## Contributing
 
