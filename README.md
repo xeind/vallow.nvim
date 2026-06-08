@@ -5,23 +5,7 @@ fallow for Neovim. See your unused code, duplicates, and health in a native spli
 Powered by [fallow](https://github.com/fallow-rs/fallow), a sub-second static analysis
 engine for JS/TS. No tree-sitter, no LSP, no config needed on the Neovim side.
 
-```
-  VALLOW
-  ─────────────────────────────────────────────────────────────
-  ▼ UNUSED CODE                                              24
-    ▼ 󰘍 Unused Exports                                        7
-        src/utils.ts            formatDate          value
-        src/utils.ts            oldHelper           value
-        src/types.ts            LegacyUser          type
-      ▶ 󰈔 Unused Files                                        3
-      ▶ T  Unused Types                                       5
-      ▶ •  Unused Members                                     9
-  ▼ ISSUES                                                     2
-    ▶ 󰌶 Unresolved Imports                                    1
-    ▶ 󰑷 Circular Deps                                         1
-  ─────────────────────────────────────────────────────────────
-  26 issues  312ms
-```
+![vallow panel](vallow-preview.png)
 
 ## Requirements
 
