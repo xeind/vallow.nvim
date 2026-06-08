@@ -187,6 +187,9 @@ M.render = function(buf, results, win)
                   if not full and #items > max then
                     local more_line = string.format("      ▶ %d more…", #items - max)
                     push(more_line, 6, #more_line, "VallowKind", { _type = "more", key = cat.key })
+                  elseif full and #items > max then
+                    local less_line = "      ▼ show less"
+                    push(less_line, 6, #less_line, "VallowKind", { _type = "less", key = cat.key })
                   end
                 end
               end

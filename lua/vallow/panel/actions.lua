@@ -144,6 +144,10 @@ M.toggle_fold = function(buf)
     local full = vim.b[buf].vallow_cats_full or {}
     full[item.key] = true
     vim.b[buf].vallow_cats_full = full
+  elseif item._type == "less" then
+    local full = vim.b[buf].vallow_cats_full or {}
+    full[item.key] = false
+    vim.b[buf].vallow_cats_full = full
   elseif item._type == "section" then
     local s = vim.b[buf].vallow_open_secs or {}
     s[item.key] = not (s[item.key] ~= false)
