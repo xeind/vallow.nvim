@@ -462,8 +462,10 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
     local name_w, file_w, cyc_w, cog_w = 0, 0, 0, 0
     for _, it in ipairs(items) do
       local nm = it.name == "<arrow>" and ("λ:" .. (it.lnum or "?")) or (it.name or "")
+      local icon = file_icon(it.relative_path)
       name_w = math.max(name_w, #nm)
-      file_w = math.max(file_w, #basename(it.relative_path))
+      -- file_w uses display width so icon (2-col glyph) is accounted for
+      file_w = math.max(file_w, vim.fn.strdisplaywidth(icon .. basename(it.relative_path)))
       if it.cyclomatic then
         cyc_w = math.max(cyc_w, #tostring(it.cyclomatic))
       end
@@ -491,21 +493,23 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
     end
 
     for _, item in ipairs(items) do
-      local name = item.name == "<arrow>" and "λ" or (item.name or "")
+      local name = item.name == "<arrow>" and ("λ:" .. (item.lnum or "?")) or (item.name or "")
+      local icon = file_icon(item.relative_path)
       local file = basename(item.relative_path)
       local cyc_s = item.cyclomatic and tostring(item.cyclomatic) or ""
       local cog_s = item.cognitive and tostring(item.cognitive) or ""
 
       local row = indent .. M._dpad(name, name_w) .. gap
       local file_pos = #row
-      row = row .. M._dpad(file, file_w) .. gap
+      row = row .. M._dpad(icon .. file, file_w) .. gap
       local cyc_pos = #row
       row = row .. M._dpad(cyc_s, cyc_w) .. gap
       local cog_pos = #row
       row = row .. cog_s
 
       push(row, #indent, #indent + #name, "VallowName", item)
-      hl_last(file_pos, file_pos + #file, "VallowPath")
+      -- highlight starts after icon bytes
+      hl_last(file_pos + #icon, file_pos + #icon + #file, "VallowPath")
       if cyc_s ~= "" then
         hl_last(cyc_pos, cyc_pos + #cyc_s, cyc_hl(item.cyclomatic))
       end
@@ -530,6 +534,7 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       end
     end
 
+    -- path_w accounts for icon display width
     local path_w = math.min(36, math.floor((win_width - #indent) * 0.55))
     -- Ensure column widths fit their header labels
     score_col_w = math.max(score_col_w, 5) -- "score"
@@ -549,7 +554,8 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
     end
 
     for _, item in ipairs(items) do
-      local p = M._truncate(item.relative_path or "", path_w)
+      local icon = file_icon(item.relative_path)
+      local p = M._truncate(item.relative_path or "", path_w - vim.fn.strdisplaywidth(icon))
       local score_s = item.score ~= nil and tostring(item.score) or ""
       local commits_s = item.commits ~= nil and tostring(item.commits) or ""
       local trend_s = (item.trend and item.trend ~= "") and item.trend or ""
@@ -578,21 +584,16 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
         trend_hl = "VallowSevHint"
       end
 
-      -- Fixed-width columns so values line up regardless of digit count
-      local p_padded = M._dpad(p, path_w)
-      local sc_padded = M._dpad(score_s, score_col_w)
-      local cm_padded = M._dpad(commits_s, commits_col_w)
-
-      local row = indent .. p_padded .. gap
+      local row = indent .. M._dpad(icon .. p, path_w) .. gap
       local sc_pos = #row
-      row = row .. sc_padded .. gap
+      row = row .. M._dpad(score_s, score_col_w) .. gap
       local cm_pos = #row
-      row = row .. cm_padded .. gap
+      row = row .. M._dpad(commits_s, commits_col_w) .. gap
       local tr_pos = #row
       row = row .. trend_s
 
       push(row, 0, 0, nil, item)
-      hl_last(#indent, #indent + #p, "VallowPath")
+      hl_last(#indent + #icon, #indent + #icon + #p, "VallowPath")
       if score_s ~= "" then
         hl_last(sc_pos, sc_pos + #score_s, score_hl)
       end
