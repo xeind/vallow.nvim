@@ -164,39 +164,6 @@ vim.o.statusline = "%{%v:lua.require('vallow').statusline()%}"
 
 Shows `vallow 42` when issues exist, `vallow ✓` when clean, empty when not run.
 
-### Filter to current file
-
-From any buffer, open the panel and filter findings to that file:
-
-```lua
-vim.keymap.set("n", "<leader>%", require("vallow").filter_current_file)
-```
-
-Press again to toggle the filter off.
-
-### Adding custom sections
-
-Add a section and its categories in your setup:
-
-```lua
-require("vallow").setup({
-  sections = {
-    unused_code  = { label = "UNUSED CODE",  order = 1 },
-    issues       = { label = "ISSUES",       order = 2 },
-    duplicates   = { label = "DUPLICATES",   order = 3 },
-    health       = { label = "HEALTH",       order = 4 },
-    architecture = { label = "ARCHITECTURE", order = 5 },
-  },
-  categories = {
-    -- your existing categories...
-    boundary_violations = {
-      icon = "󰑷", label = "Boundary Violations",
-      section = "architecture", order = 1, severity = "error",
-    },
-  },
-})
-```
-
 ### Configuring fallow
 
 vallow passes the project root to fallow. Configure fallow via `.fallowrc.json`:
