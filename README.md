@@ -13,6 +13,7 @@ engine for JS/TS. No tree-sitter, no LSP, no config needed on the Neovim side.
 - [fallow](https://github.com/fallow-rs/fallow) CLI
 - A TypeScript or JavaScript project with a `package.json`
 - A [Nerd Font](https://www.nerdfonts.com/) if you want the icons (optional)
+- [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons) for file icons in the panel (optional)
 
 ## Install
 
@@ -28,17 +29,6 @@ engine for JS/TS. No tree-sitter, no LSP, no config needed on the Neovim side.
     { "<leader>vs", "<cmd>VallowSearch<cr>",  desc = "Vallow: search findings" },
   },
   opts = {},
-}
-```
-
-### [packer.nvim](https://github.com/wbthomason/packer.nvim)
-
-```lua
-use {
-  "xeind/vallow.nvim",
-  config = function()
-    require("vallow").setup()
-  end,
 }
 ```
 
@@ -62,7 +52,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 |---|---|
 | `:Vallow` | Toggle the panel |
 | `:VallowRefresh` | Re-run fallow and refresh |
-| `:VallowSearch` | Search findings with telescope / fzf-lua / vim.ui.select |
+| `:VallowSearch` | Search findings with snacks / telescope / fzf-lua / vim.ui.select |
 
 Press `<CR>` on any issue to jump to the file and line.
 
@@ -103,6 +93,7 @@ Sections and categories shown only when they have findings.
 | **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports |
 | **DUPLICATES** | Clone Groups |
 | **HEALTH** | Complexity, Hotspots, Refactoring Targets |
+| **ARCHITECTURE** | Boundary Violations |
 
 Severity is color-coded: errors red, warnings yellow, hints grey.
 
@@ -124,8 +115,7 @@ require("vallow").setup({
   max_items = 30,  -- items per category before "N more..." expands
 
   diagnostics = {
-    enabled  = true,
-    severity = vim.diagnostic.severity.HINT,
+    enabled = true,
   },
 
   statusline = {
@@ -136,7 +126,7 @@ require("vallow").setup({
     close        = "q",
     jump         = "<CR>",
     refresh      = "r",
-    toggle_fold  = "<Tab>",
+    toggle_fold  = nil,  -- unset by default; za/zo/zc/zR/zM always work
     next_tab     = "L",
     prev_tab     = "H",
     next_section = "]c",
@@ -146,9 +136,12 @@ require("vallow").setup({
     pick         = "gf",
   },
 })
+```
 
--- All highlight groups (VallowHeader, VallowPath, VallowName, VallowSevError, …)
--- link to standard Neovim groups and work with any colorscheme. Override as needed:
+All highlight groups (`VallowHeader`, `VallowPath`, `VallowName`, `VallowSevError`, …)
+link to standard Neovim groups and work with any colorscheme. Override as needed:
+
+```lua
 vim.api.nvim_set_hl(0, "VallowHeader", { fg = "#bb9af7", bold = true })
 ```
 
@@ -197,39 +190,6 @@ Suppress findings inline:
 export function keepThisPublic() {}
 ```
 
-
-## Contributing
-
-```sh
-git clone https://github.com/xeind/vallow.nvim
-cd vallow.nvim
-```
-
-Point lazy.nvim at your clone for development:
-
-```lua
-{ dir = "~/path/to/vallow.nvim", opts = {} }
-```
-
-```
-lua/vallow/
-  init.lua          Public API
-  config.lua        Defaults + deep merge
-  health.lua        :checkhealth
-  runner.lua        Async fallow -> output contract
-  labels.lua        Shared label map
-  diagnostics.lua   LSP-style inline diagnostics
-  picker.lua        Telescope / fzf-lua / vim.ui.select
-  panel/
-    init.lua        Window lifecycle
-    window.lua      Split buffer
-    render.lua      Rendering + extmarks
-    actions.lua     Keymaps
-    highlights.lua  Highlight groups
-    help.lua        Keymap reference popup
-plugin/
-  vallow.lua        :Vallow / :VallowRefresh / :VallowSearch
-```
 
 ## License
 

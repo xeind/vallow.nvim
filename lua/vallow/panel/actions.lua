@@ -119,8 +119,9 @@ M._do_jump = function(buf, cmd)
     pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(path))
   else
     vim.cmd("wincmd p")
-    local ok = pcall(vim.cmd, cmd .. " " .. vim.fn.fnameescape(path))
+    local ok, err = pcall(vim.cmd, cmd .. " " .. vim.fn.fnameescape(path))
     if not ok then
+      vim.notify("vallow: cannot open file: " .. (err or path), vim.log.levels.WARN)
       return
     end
   end
@@ -403,7 +404,7 @@ M.filter = function(buf)
     buffer = sbuf,
     callback = function()
       local line = vim.api.nvim_buf_get_lines(sbuf, 0, 1, false)[1] or ""
-      rerender(line:gsub("^%s+", ""))
+      rerender(vim.trim(line))
     end,
   })
 
@@ -596,14 +597,20 @@ M.detail = function(buf)
     vim.api.nvim_buf_add_highlight(fbuf, ns, h.hl, h.lnum, 2, -1)
   end
 
-  local function close()
+  local detail_keys = { "<Esc>", "K", "q" }
+
+  local function close_detail()
+    for _, k in ipairs(detail_keys) do
+      pcall(vim.keymap.del, "n", k, { buffer = buf })
+    end
     pcall(vim.api.nvim_win_close, fwin, true)
     pcall(vim.api.nvim_buf_delete, fbuf, { force = true })
   end
-  for _, key in ipairs({ "<Esc>", "K", "q" }) do
-    vim.keymap.set("n", key, close, { buffer = buf, once = true, nowait = true, silent = true })
+
+  for _, key in ipairs(detail_keys) do
+    vim.keymap.set("n", key, close_detail, { buffer = buf, nowait = true, silent = true })
   end
-  vim.api.nvim_create_autocmd("CursorMoved", { buffer = buf, once = true, callback = close })
+  vim.api.nvim_create_autocmd("CursorMoved", { buffer = buf, once = true, callback = close_detail })
 end
 
 -- ── Current-buffer filter ─────────────────────────────────────────────

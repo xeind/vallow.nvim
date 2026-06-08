@@ -18,10 +18,10 @@ M.defaults = {
   },
 
   sections = {
-    unused_code  = { icon = "󰈔", label = "UNUSED CODE",  order = 1 },
-    issues       = { icon = "󰅖", label = "ISSUES",       order = 2 },
-    duplicates   = { icon = "󰏗", label = "DUPLICATES",   order = 3 },
-    health       = { icon = "󰚰", label = "HEALTH",       order = 4 },
+    unused_code = { icon = "󰈔", label = "UNUSED CODE", order = 1 },
+    issues = { icon = "󰅖", label = "ISSUES", order = 2 },
+    duplicates = { icon = "󰏗", label = "DUPLICATES", order = 3 },
+    health = { icon = "󰚰", label = "HEALTH", order = 4 },
     architecture = { icon = "󰑷", label = "ARCHITECTURE", order = 5 },
   },
 
@@ -88,7 +88,6 @@ M.defaults = {
   -- Inline diagnostics in open buffers (like LSP hints)
   diagnostics = {
     enabled = true,
-    severity = vim.diagnostic.severity.HINT, -- severity for unused export hints
   },
 
   keymaps = {

@@ -128,6 +128,9 @@ M.apply_buf = function(bufnr, findings)
     return
   end
 
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
   local path = vim.api.nvim_buf_get_name(bufnr)
   if not path or path == "" then
     return
