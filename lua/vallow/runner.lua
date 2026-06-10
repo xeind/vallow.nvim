@@ -4,10 +4,18 @@ local M = {}
 local _gen = 0
 
 -- Returns the project root (directory containing package.json), or nil if not a JS/TS project.
+-- Searches upward from cwd first, then from the current buffer's path as a fallback.
 M.find_root = function()
-  local found = vim.fn.findfile("package.json", vim.fn.getcwd() .. ";")
-  if found ~= "" then
-    return vim.fn.fnamemodify(found, ":h")
+  local searches = { vim.fn.getcwd() }
+  local bufpath = vim.api.nvim_buf_get_name(0)
+  if bufpath and bufpath ~= "" then
+    table.insert(searches, vim.fn.fnamemodify(bufpath, ":h"))
+  end
+  for _, dir in ipairs(searches) do
+    local found = vim.fn.findfile("package.json", dir .. ";")
+    if found ~= "" then
+      return vim.fn.fnamemodify(found, ":h")
+    end
   end
   return nil
 end
@@ -30,6 +38,10 @@ M.run = function(callback)
     table.insert(cmd, a)
   end
 
+  local timeout_ms = 60000 -- 60 s hard limit
+  local timer = vim.uv.new_timer()
+  local done = false
+
   local job_id = vim.fn.jobstart(cmd, {
     cwd = root,
     on_stdout = function(_, data)
@@ -47,6 +59,12 @@ M.run = function(callback)
       end
     end,
     on_exit = function(_, code)
+      if done then
+        return
+      end
+      done = true
+      timer:stop()
+      timer:close()
       vim.schedule(function()
         if gen ~= _gen then
           return
@@ -79,11 +97,29 @@ M.run = function(callback)
     end,
   })
   if job_id == -1 then
+    timer:stop()
+    timer:close()
     callback({
       error = "vallow: failed to start '" .. cfg.fallow_cmd .. "' (not found in PATH?)",
       findings = M._empty_findings(),
     })
+    return
   end
+
+  timer:start(timeout_ms, 0, function()
+    if done then
+      return
+    end
+    done = true
+    timer:close()
+    pcall(vim.fn.jobstop, job_id)
+    vim.schedule(function()
+      if gen ~= _gen then
+        return
+      end
+      callback({ error = "vallow: fallow timed out after 60s", findings = M._empty_findings() })
+    end)
+  end)
 end
 
 M._run_separate = function(gen, root, cfg, callback)
@@ -139,6 +175,10 @@ end
 
 M._job = function(cmd, cwd, callback)
   local stdout, stderr = {}, {}
+  local timeout_ms = 60000
+  local timer = vim.uv.new_timer()
+  local done = false
+
   local job_id = vim.fn.jobstart(cmd, {
     cwd = cwd,
     on_stdout = function(_, data)
@@ -156,6 +196,12 @@ M._job = function(cmd, cwd, callback)
       end
     end,
     on_exit = function(_, code)
+      if done then
+        return
+      end
+      done = true
+      timer:stop()
+      timer:close()
       local raw = table.concat(stdout, "")
       if code ~= 0 or raw == "" then
         callback(false, table.concat(stderr, "\n"))
@@ -166,8 +212,21 @@ M._job = function(cmd, cwd, callback)
     end,
   })
   if job_id == -1 then
+    timer:stop()
+    timer:close()
     callback(false, "failed to start: " .. table.concat(cmd, " "))
+    return
   end
+
+  timer:start(timeout_ms, 0, function()
+    if done then
+      return
+    end
+    done = true
+    timer:close()
+    pcall(vim.fn.jobstop, job_id)
+    callback(false, "timed out after 60s")
+  end)
 end
 
 -- Normalize fallow JSON → output contract.
