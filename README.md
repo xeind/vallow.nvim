@@ -107,6 +107,9 @@ require("vallow").setup({
   -- Which analyses to run. Remove entries to skip them entirely.
   analyses = { "dead-code", "dupes", "health" },
 
+  -- Reorder tabs. Omitted sections keep their default order after listed ones.
+  -- section_order = { "health", "issues", "duplicates", "unused_code", "architecture" },
+
   window = {
     position = "right",  -- "bottom" | "top" | "left" | "right"
     size     = 0.5,

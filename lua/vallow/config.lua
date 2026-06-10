@@ -122,6 +122,15 @@ end
 
 function M.setup(opts)
   M.options = deep_merge(M.defaults, opts or {})
+  -- section_order: convenience list that rewrites section order numbers.
+  -- e.g. section_order = { "health", "issues", "unused_code", "duplicates", "architecture" }
+  if M.options.section_order then
+    for i, key in ipairs(M.options.section_order) do
+      if M.options.sections[key] then
+        M.options.sections[key].order = i
+      end
+    end
+  end
 end
 
 function M.get()
