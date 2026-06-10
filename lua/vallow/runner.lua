@@ -369,11 +369,18 @@ M._normalize = function(raw, root)
       actions = v.actions,
     })
   end
+  -- Unlisted deps: fallow may not include a file path (package-level finding).
+  -- Fall back to package.json so <CR> opens somewhere actionable.
+  local pkg_json = root .. "/package.json"
   for _, v in ipairs(check.unlisted_dependencies or {}) do
+    local p = v.path or ""
+    if p == "" then
+      p = pkg_json
+    end
     table.insert(findings.unlisted_deps.items, {
       name = v.package_name or v.packageName or v.package or "",
-      path = v.path or "",
-      relative_path = rel(v.path),
+      path = p,
+      relative_path = rel(p),
       lnum = v.line or 1,
       actions = v.actions,
     })
