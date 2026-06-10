@@ -541,6 +541,31 @@ M._normalize = function(raw, root)
     findings.health_score = health_raw.health_score
   end
 
+  -- Sort all flat item buckets by file path then line number
+  local function by_file_line(a, b)
+    local pa, pb = a.path or "", b.path or ""
+    if pa ~= pb then
+      return pa < pb
+    end
+    return (a.lnum or 0) < (b.lnum or 0)
+  end
+  local sortable = {
+    "unused_exports",
+    "unused_types",
+    "unused_enum_members",
+    "unused_class_members",
+    "unused_files",
+    "unresolved_imports",
+    "unlisted_deps",
+    "duplicate_exports",
+    "circular_deps",
+    "boundary_violations",
+    "health_complexity",
+  }
+  for _, key in ipairs(sortable) do
+    table.sort(findings[key].items, by_file_line)
+  end
+
   return { repo_root = root, duration_ms = elapsed, findings = findings, error = nil }
 end
 

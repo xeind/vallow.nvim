@@ -85,6 +85,9 @@ M.defaults = {
   -- Press <Tab> or <CR> on the "more" row to show all.
   max_items = 30,
 
+  -- Silently re-run fallow after saving a JS/TS file (background, no loading flash).
+  auto_refresh = false,
+
   -- Inline diagnostics in open buffers (like LSP hints)
   diagnostics = {
     enabled = true,

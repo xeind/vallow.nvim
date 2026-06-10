@@ -116,6 +116,7 @@ require("vallow").setup({
   },
 
   max_items = 30,  -- items per category before "N more..." expands
+  auto_refresh = false,  -- re-run fallow silently on every JS/TS file save
 
   diagnostics = {
     enabled = true,

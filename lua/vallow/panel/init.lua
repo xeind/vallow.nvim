@@ -30,6 +30,17 @@ M.open = function()
 
   require("vallow.panel.actions").setup(M.state.buf)
 
+  -- Auto-refresh on save (opt-in via config.auto_refresh)
+  vim.api.nvim_create_autocmd("BufWritePost", {
+    group = vim.api.nvim_create_augroup("VallowAutoRefresh", { clear = true }),
+    pattern = { "*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.cjs" },
+    callback = function()
+      if require("vallow.config").get().auto_refresh then
+        M._bg_refresh()
+      end
+    end,
+  })
+
   -- Re-apply diagnostics when a new buffer is opened after analysis ran
   vim.api.nvim_create_autocmd("BufEnter", {
     group = vim.api.nvim_create_augroup("VallowDiagBufEnter", { clear = true }),
@@ -57,6 +68,12 @@ M.open = function()
 end
 
 M.close = function()
+  -- Close orphaned filter search window if open
+  local actions = require("vallow.panel.actions")
+  if actions._search_win and vim.api.nvim_win_is_valid(actions._search_win) then
+    pcall(vim.api.nvim_win_close, actions._search_win, true)
+    actions._search_win = nil
+  end
   if M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
     vim.api.nvim_win_close(M.state.win, true)
   end
