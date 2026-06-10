@@ -3,18 +3,13 @@ local M = {}
 
 local _gen = 0
 
+-- Returns the project root (directory containing package.json), or nil if not a JS/TS project.
 M.find_root = function()
-  local markers = { "package.json", ".git" }
-  for _, marker in ipairs(markers) do
-    local found = vim.fn.findfile(marker, vim.fn.getcwd() .. ";")
-    if found == "" then
-      found = vim.fn.finddir(marker, vim.fn.getcwd() .. ";")
-    end
-    if found ~= "" then
-      return vim.fn.fnamemodify(found, ":h")
-    end
+  local found = vim.fn.findfile("package.json", vim.fn.getcwd() .. ";")
+  if found ~= "" then
+    return vim.fn.fnamemodify(found, ":h")
   end
-  return vim.fn.getcwd()
+  return nil
 end
 
 M.run = function(callback)
@@ -22,6 +17,10 @@ M.run = function(callback)
   local gen = _gen
   local cfg = require("vallow.config").get()
   local root = M.find_root()
+  if not root then
+    callback({ findings = M._empty_findings() })
+    return
+  end
   local stdout, stderr = {}, {}
 
   -- Combined mode: plain fallow run. Health flags only go through _run_separate
