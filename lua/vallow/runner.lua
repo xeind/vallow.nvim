@@ -3,8 +3,9 @@ local M = {}
 
 local _gen = 0
 
--- Returns the project root (directory containing package.json), or nil if not a JS/TS project.
+-- Returns the project root, or nil if not a JS/TS project.
 -- Searches upward from cwd first, then from the current buffer's path as a fallback.
+-- Prefers .fallowrc.json (explicit fallow config), falls back to package.json.
 M.find_root = function()
   local searches = { vim.fn.getcwd() }
   local bufpath = vim.api.nvim_buf_get_name(0)
@@ -12,9 +13,11 @@ M.find_root = function()
     table.insert(searches, vim.fn.fnamemodify(bufpath, ":h"))
   end
   for _, dir in ipairs(searches) do
-    local found = vim.fn.findfile("package.json", dir .. ";")
-    if found ~= "" then
-      return vim.fn.fnamemodify(found, ":h")
+    for _, marker in ipairs({ ".fallowrc.json", "package.json" }) do
+      local found = vim.fn.findfile(marker, dir .. ";")
+      if found ~= "" then
+        return vim.fn.fnamemodify(found, ":h")
+      end
     end
   end
   return nil

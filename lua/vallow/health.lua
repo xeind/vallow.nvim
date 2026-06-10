@@ -21,12 +21,20 @@ function M.check()
     vim.health.error(("fallow not found (%q) — install with: npm i -g fallow"):format(cmd))
   end
 
-  -- package.json reachable from cwd
-  local pkg = vim.fn.findfile("package.json", vim.fn.getcwd() .. ";")
-  if pkg ~= "" then
-    vim.health.ok(("package.json: %s"):format(vim.fn.fnamemodify(pkg, ":~")))
+  -- package.json / .fallowrc.json reachable from cwd
+  local root = require("vallow.runner").find_root()
+  if root then
+    vim.health.ok(("project root: %s"):format(vim.fn.fnamemodify(root, ":~")))
   else
-    vim.health.warn("No package.json found from cwd — fallow requires a JS/TS project")
+    vim.health.warn("No package.json or .fallowrc.json found from cwd — fallow requires a JS/TS project")
+  end
+
+  -- fallow-lsp (optional, for LSP integration)
+  if vim.fn.executable("fallow-lsp") == 1 then
+    local v = vim.fn.system("fallow-lsp --version 2>&1"):gsub("\n", "")
+    vim.health.ok(("fallow-lsp: %s (LSP diagnostics + code actions available)"):format(v))
+  else
+    vim.health.ok("fallow-lsp not found — install fallow to enable LSP integration (optional)")
   end
 end
 

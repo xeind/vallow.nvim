@@ -212,6 +212,7 @@ M.render = function(buf, results, win)
     { "L/H", "tab" },
     { "P", "peek" },
     { "K", "detail" },
+    { "ga", "fix" },
     { "f", "filter" },
     { "%", "cur file" },
     { "r", "refresh" },

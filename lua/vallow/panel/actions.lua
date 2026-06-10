@@ -91,6 +91,9 @@ M.setup = function(buf)
   map("%", function()
     M.filter_current_buf(buf)
   end)
+  map("ga", function()
+    M.code_action(buf)
+  end)
   map("?", function()
     require("vallow.panel.help").open()
   end)
@@ -615,6 +618,38 @@ M.detail = function(buf)
     vim.keymap.set("n", key, close_detail, { buffer = buf, nowait = true, silent = true })
   end
   vim.api.nvim_create_autocmd("CursorMoved", { buffer = buf, once = true, callback = close_detail })
+end
+
+-- ── LSP code actions ─────────────────────────────────────────────────
+
+M.code_action = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then
+    return
+  end
+  local path = item.path
+  if not path or path == "" then
+    return
+  end
+
+  -- Open the target file in the previous window, position at the finding, trigger code action
+  local fbuf = vim.fn.bufadd(path)
+  vim.fn.bufload(fbuf)
+
+  if #vim.lsp.get_clients({ bufnr = fbuf, name = "fallow" }) == 0 then
+    vim.notify("vallow: fallow LSP not attached to this file", vim.log.levels.INFO)
+    return
+  end
+
+  vim.cmd("wincmd p")
+  local ok = pcall(vim.cmd, "edit " .. vim.fn.fnameescape(path))
+  if not ok then
+    return
+  end
+  local lnum = math.max(1, item.lnum or 1)
+  local col = math.max(0, item.col or 0)
+  pcall(vim.api.nvim_win_set_cursor, 0, { lnum, col })
+  vim.lsp.buf.code_action()
 end
 
 -- ── Current-buffer filter ─────────────────────────────────────────────
