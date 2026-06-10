@@ -5,21 +5,39 @@ local _gen = 0
 
 -- Returns the project root, or nil if not a JS/TS project.
 -- Searches upward from cwd first, then from the current buffer's path as a fallback.
--- Prefers .fallowrc.json (explicit fallow config), falls back to package.json.
+-- Monorepo workspace roots take priority over nested package.json files.
 M.find_root = function()
   local searches = { vim.fn.getcwd() }
+
+  -- Only use buffer path if it looks like a real filesystem path (not oil://, fugitive://, term://, etc.)
   local bufpath = vim.api.nvim_buf_get_name(0)
-  if bufpath and bufpath ~= "" then
+  if bufpath and bufpath:sub(1, 1) == "/" then
     table.insert(searches, vim.fn.fnamemodify(bufpath, ":h"))
   end
+
+  -- Monorepo workspace markers — if found, that's the true root fallow should analyse.
+  -- Checked before package.json so sub-package package.json doesn't win over the workspace root.
+  local workspace_markers = { ".fallowrc.json", "pnpm-workspace.yaml", "lerna.json", "nx.json", "turbo.json" }
+  local project_markers = { "package.json" }
+
   for _, dir in ipairs(searches) do
-    for _, marker in ipairs({ ".fallowrc.json", "package.json" }) do
+    for _, marker in ipairs(workspace_markers) do
       local found = vim.fn.findfile(marker, dir .. ";")
       if found ~= "" then
         return vim.fn.fnamemodify(found, ":h")
       end
     end
   end
+
+  for _, dir in ipairs(searches) do
+    for _, marker in ipairs(project_markers) do
+      local found = vim.fn.findfile(marker, dir .. ";")
+      if found ~= "" then
+        return vim.fn.fnamemodify(found, ":h")
+      end
+    end
+  end
+
   return nil
 end
 
