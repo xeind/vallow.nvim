@@ -279,10 +279,50 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       local n = item.name or ""
       push(indent .. n, #indent, #indent + #n, "VallowName", item)
     end
-  elseif cat_key == "unresolved_imports" or cat_key == "unlisted_deps" then
+  elseif cat_key == "unresolved_imports" then
+    -- Group by specifier so "missing-module" imported in 20 files shows as one header + sub-rows
+    local by_spec, spec_order = {}, {}
     for _, item in ipairs(items) do
-      local n = item.name ~= "" and item.name or (item.relative_path or "")
-      push(indent .. n, #indent, #indent + #n, "VallowName", item)
+      local spec = item.name ~= "" and item.name or (item.relative_path or "?")
+      if not by_spec[spec] then
+        by_spec[spec] = {}
+        table.insert(spec_order, spec)
+      end
+      table.insert(by_spec[spec], item)
+    end
+    local sub = "        "
+    for _, spec in ipairs(spec_order) do
+      local occurrences = by_spec[spec]
+      local count_s = #occurrences > 1 and ("  ×" .. #occurrences) or ""
+      push(indent .. spec .. count_s, #indent, #indent + #spec, "VallowName", occurrences[1])
+      if count_s ~= "" then
+        hl_last(#indent + #spec, #indent + #spec + #count_s, "VallowKind")
+      end
+      for _, occ in ipairs(occurrences) do
+        local icon = file_icon(occ.relative_path)
+        local rp = M._truncate(occ.relative_path or "", win_width - #sub - #icon - 6)
+        local ln = occ.lnum and (":" .. occ.lnum) or ""
+        local row = sub .. icon .. rp .. ln
+        push(row, #sub, #sub + #icon + #rp, "VallowPath", occ)
+        if ln ~= "" then
+          hl_last(#sub + #icon + #rp, #sub + #icon + #rp + #ln, "VallowKind")
+        end
+      end
+    end
+  elseif cat_key == "unlisted_deps" then
+    for _, item in ipairs(items) do
+      local n = item.name or ""
+      local name_padded = M._dpad(n, math.min(30, win_width - #indent - 16))
+      local rp = item.relative_path or "package.json"
+      -- Only show file hint if fallow gave a specific location (not our package.json fallback)
+      local show_loc = item.lnum and item.lnum > 1
+      local row = indent .. name_padded .. (show_loc and ("  " .. rp .. ":" .. item.lnum) or "")
+      push(row, #indent, #indent + #n, "VallowName", item)
+      if show_loc then
+        local loc_start = #indent + #name_padded + 2
+        hl_last(loc_start, loc_start + #rp, "VallowPath")
+        hl_last(loc_start + #rp, loc_start + #rp + 1 + #tostring(item.lnum), "VallowKind")
+      end
     end
   elseif cat_key == "duplicate_exports" then
     for _, item in ipairs(items) do
