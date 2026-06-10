@@ -116,7 +116,11 @@ M._do_jump = function(buf, cmd)
   end
 
   if cmd == "tabedit" then
-    pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(path))
+    local ok, err = pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(path))
+    if not ok then
+      vim.notify("vallow: cannot open file: " .. (err or path), vim.log.levels.WARN)
+      return
+    end
   else
     vim.cmd("wincmd p")
     local ok, err = pcall(vim.cmd, cmd .. " " .. vim.fn.fnameescape(path))
