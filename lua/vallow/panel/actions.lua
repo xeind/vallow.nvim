@@ -142,6 +142,13 @@ end
 
 -- ── Folds ────────────────────────────────────────────────────────────
 
+local function _save_folds(buf)
+  local state = require("vallow.panel").state
+  state.fold_secs = vim.b[buf].vallow_open_secs or {}
+  state.fold_cats = vim.b[buf].vallow_open_cats or {}
+  state.fold_full = vim.b[buf].vallow_cats_full or {}
+end
+
 M.toggle_fold = function(buf)
   local item = M._item_at_cursor(buf)
   if not item then
@@ -187,6 +194,7 @@ M.toggle_fold = function(buf)
   end
 
   local panel = require("vallow.panel")
+  _save_folds(buf)
   if panel.state.results then
     require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
   end
@@ -211,6 +219,7 @@ M.set_fold = function(buf, open)
   end
 
   local panel = require("vallow.panel")
+  _save_folds(buf)
   if panel.state.results then
     require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
   end
@@ -230,6 +239,7 @@ M.set_all_folds = function(buf, open)
   vim.b[buf].vallow_open_cats = cats
 
   local panel = require("vallow.panel")
+  _save_folds(buf)
   if panel.state.results then
     require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
   end

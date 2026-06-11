@@ -25,6 +25,17 @@ M.prefetch = function()
   require("vallow.panel").prefetch()
 end
 
+-- Focus the vallow panel window from any buffer.
+-- Bind to whatever key you like, e.g.:
+--   vim.keymap.set("n", "<leader>vv", require("vallow").focus)
+-- <C-w>p also works natively since the panel is the previous window after a jump.
+M.focus = function()
+  local panel = require("vallow.panel")
+  if panel._is_open() then
+    vim.api.nvim_set_current_win(panel.state.win)
+  end
+end
+
 -- Open the panel (if not open) and filter findings to the current file.
 -- Bind this to whatever key you like:
 --   vim.keymap.set("n", "%", require("vallow").filter_current_file)

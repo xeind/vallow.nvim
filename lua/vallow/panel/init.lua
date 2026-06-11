@@ -5,6 +5,10 @@ M.state = {
   win = nil,
   results = nil,
   current_section = nil, -- nil = ALL tabs visible
+  -- Fold state persisted across panel closes (buffer variables are wiped with the buffer)
+  fold_secs = {},
+  fold_cats = {},
+  fold_full = {},
 }
 
 M.open = function()
@@ -27,6 +31,11 @@ M.open = function()
       M.state.win = nil
     end,
   })
+
+  -- Restore fold state from previous session
+  vim.b[M.state.buf].vallow_open_secs = M.state.fold_secs
+  vim.b[M.state.buf].vallow_open_cats = M.state.fold_cats
+  vim.b[M.state.buf].vallow_cats_full = M.state.fold_full
 
   require("vallow.panel.actions").setup(M.state.buf)
 
