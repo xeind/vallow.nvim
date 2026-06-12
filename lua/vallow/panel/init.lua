@@ -11,6 +11,9 @@ M.state = {
   fold_full = {},
 }
 
+-- Debounce timer for auto-refresh
+local _refresh_timer = nil
+
 M.open = function()
   if M._is_open() then
     vim.api.nvim_set_current_win(M.state.win)
@@ -42,10 +45,57 @@ M.open = function()
   -- Auto-refresh on save (opt-in via config.auto_refresh)
   vim.api.nvim_create_autocmd("BufWritePost", {
     group = vim.api.nvim_create_augroup("VallowAutoRefresh", { clear = true }),
-    pattern = { "*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.cjs" },
-    callback = function()
-      if require("vallow.config").get().auto_refresh then
+    pattern = { "*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.cjs", "package.json" },
+    callback = function(ev)
+      if not require("vallow.config").get().auto_refresh then
+        return
+      end
+      -- Only refresh if the saved file belongs to the current project root
+      local root = M.state.results and M.state.results.repo_root
+      if root then
+        local saved = vim.api.nvim_buf_get_name(ev.buf)
+        if saved == "" or not saved:find(root, 1, true) then
+          return
+        end
+      end
+      -- Debounce: cancel any pending refresh before starting a new one
+      if _refresh_timer then
+        _refresh_timer:stop()
+        _refresh_timer:close()
+        _refresh_timer = nil
+      end
+      _refresh_timer = vim.uv.new_timer()
+      _refresh_timer:start(500, 0, vim.schedule_wrap(function()
+        _refresh_timer:close()
+        _refresh_timer = nil
         M._bg_refresh()
+      end))
+    end,
+  })
+
+  -- Clear stale results when the working directory changes to a different project
+  vim.api.nvim_create_autocmd("DirChanged", {
+    group = vim.api.nvim_create_augroup("VallowDirChanged", { clear = true }),
+    callback = function()
+      local runner = require("vallow.runner")
+      local new_root = runner.find_root()
+      local old_root = M.state.results and M.state.results.repo_root
+      if new_root ~= old_root then
+        M.state.results = nil
+        -- Re-prefetch for the new directory
+        runner.run(function(results)
+          M.state.results = results
+          if M._is_open() then
+            require("vallow.panel.render").render(M.state.buf, results, M.state.win)
+            require("vallow.panel.tabs").set_winbar(
+              M.state.win,
+              M.state.current_section,
+              results,
+              require("vallow.config").get()
+            )
+          end
+          require("vallow.diagnostics").apply(results.findings)
+        end)
       end
     end,
   })
@@ -126,8 +176,15 @@ M.refresh = function()
 end
 
 -- Silent background run — updates results and re-renders if panel is open.
--- Used when opening with cached results (stale-while-revalidate).
+-- Used when opening with cached results (stale-while-revalidate), and by the
+-- debounced auto-refresh path. Re-entrant: cancels any running timer.
 M._bg_refresh = function()
+  -- Cancel pending debounce timer if called directly (e.g. stale-while-revalidate on open)
+  if _refresh_timer then
+    _refresh_timer:stop()
+    _refresh_timer:close()
+    _refresh_timer = nil
+  end
   require("vallow.runner").run(function(results)
     M.state.results = results
     if M._is_open() then
