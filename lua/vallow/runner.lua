@@ -418,10 +418,10 @@ M._normalize = function(raw, root)
     else
       -- Live format: all locations in one array
       for _, loc in ipairs(v.locations or v.duplicate_locations or v.duplicateLocations or {}) do
-        local raw = loc.path or ""
+        local loc_path = loc.path or ""
         table.insert(locs, {
-          path = abs(raw),
-          relative_path = rel(abs(raw)),
+          path = abs(loc_path),
+          relative_path = rel(abs(loc_path)),
           lnum = loc.line or 1,
           col = loc.col or 0,
         })

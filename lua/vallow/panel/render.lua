@@ -54,13 +54,6 @@ M.render = function(buf, results, win)
     table.insert(hl_queue, { #lines - 1, cs, ce, grp })
   end
 
-  -- label + right-aligned count (uses display width so NF icons align)
-  local function labeled_row(label, count_str)
-    local dw = vim.fn.strdisplaywidth(label)
-    local pad = math.max(1, win_width - dw - #count_str)
-    return label .. string.rep(" ", pad) .. count_str
-  end
-
   -- ── Header ──────────────────────────────────────────────────────────
   push("  VALLOW", 2, 8, "VallowHeader")
   push(string.rep("─", win_width), 0, -1, "VallowBorder")
@@ -183,7 +176,7 @@ M.render = function(buf, results, win)
                   local max = cfg.max_items or 30
                   local full = (vim.b[buf].vallow_cats_full or {})[cat.key]
                   local shown = (full or #items <= max) and items or vim.list_slice(items, 1, max)
-                  M._render_items(cat.key, shown, push, hl_last, lines, win_width)
+                  M._render_items(cat.key, shown, push, hl_last, win_width)
                   if not full and #items > max then
                     local more_line = string.format("      ▶ %d more…", #items - max)
                     push(more_line, 6, #more_line, "VallowKind", { _type = "more", key = cat.key })
@@ -237,7 +230,7 @@ M.render = function(buf, results, win)
 end
 
 -- Render items for a category into the running push/hl_last closures
-M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
+M._render_items = function(cat_key, items, push, hl_last, win_width)
   local indent = "      " -- 6 spaces under category
 
   if
@@ -447,7 +440,7 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
         or (size_n >= 50 and "VallowSevWarn" or size_n >= 20 and "VallowSevHint" or "VallowKind")
 
       -- Instance count: × prefix reads more naturally than "N inst"
-      local cnt_s = n_inst > 0 and ("\xc3\x97" .. n_inst) or "" -- × U+00D7
+      local cnt_s = n_inst > 0 and ("×" .. n_inst) or ""
       local cnt_hl = n_inst >= 5 and "VallowSevWarn" or n_inst >= 3 and "VallowSevHint" or "VallowKind"
 
       -- Header row: name · size · count
