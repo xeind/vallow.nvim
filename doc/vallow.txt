@@ -1,0 +1,501 @@
+*vallow.txt*  Neovim panel for the fallow JS/TS static analyser
+
+Author:   xeind
+License:  MIT
+Homepage: https://github.com/xeind/vallow.nvim
+
+==============================================================================
+CONTENTS                                                    *vallow-contents*
+
+  1. Introduction .............. |vallow-intro|
+  2. Requirements .............. |vallow-requirements|
+  3. Quick Start ............... |vallow-quickstart|
+  4. Commands .................. |vallow-commands|
+  5. Panel Keymaps ............. |vallow-keymaps|
+  6. Configuration ............. |vallow-config|
+  7. Finding Categories ........ |vallow-categories|
+  8. Fallow Config File ........ |vallow-fallowrc|
+  9. Suppression Comments ....... |vallow-suppress|
+ 10. Lua API ................... |vallow-api|
+ 11. Health Check .............. |vallow-health|
+
+==============================================================================
+1. INTRODUCTION                                               *vallow-intro*
+
+vallow.nvim wraps the fallow CLI (https://fallow.tools) and surfaces its
+dead-code, duplication, and health findings inside a Neovim split panel.
+
+Findings appear as:
+  • Inline diagnostics in open buffers (like LSP hints)
+  • A browsable panel with folds, filters, peek, and jump-to-source
+  • A fuzzy-searchable picker (Snacks / Telescope / fzf-lua)
+
+fallow analyses TypeScript and JavaScript projects. It requires a
+package.json in the project root to detect your project.
+
+==============================================================================
+2. REQUIREMENTS                                        *vallow-requirements*
+
+Required:
+  • Neovim >= 0.10
+  • fallow CLI  https://fallow.tools/install
+
+Optional:
+  • nvim-web-devicons  — file-type icons in the panel
+  • snacks.nvim / telescope.nvim / fzf-lua  — fuzzy picker (:VallowSearch)
+  • fallow-lsp  — LSP server; vallow auto-deduplicates its diagnostics
+
+==============================================================================
+3. QUICK START                                          *vallow-quickstart*
+
+Minimal setup (lazy.nvim): >lua
+
+  {
+    "xeind/vallow.nvim",
+    event = "VeryLazy",
+    opts = {},            -- calls require("vallow").setup({})
+  }
+<
+
+Open the panel: >
+  :Vallow
+<
+Or bind a key: >lua
+  vim.keymap.set("n", "<leader>v", "<cmd>Vallow<cr>")
+<
+
+The first time you open the panel fallow runs in the background. On
+subsequent opens results are shown instantly from cache.
+
+==============================================================================
+4. COMMANDS                                              *vallow-commands*
+
+                                                                  *:Vallow*
+:Vallow
+    Toggle the vallow panel open/closed.
+
+                                                           *:VallowRefresh*
+:VallowRefresh
+    Force a fresh fallow run. Shows a loading state while running.
+
+                                                            *:VallowSearch*
+:VallowSearch
+    Open all findings in a fuzzy picker (Snacks → Telescope → fzf-lua,
+    in priority order). Results must already be loaded.
+
+==============================================================================
+5. PANEL KEYMAPS                                          *vallow-keymaps*
+
+These keys are active only inside the vallow panel buffer.
+
+NAVIGATION ~
+
+  <CR>      Jump to the finding under the cursor (edit in previous window).
+            On a section/category header: toggle fold.
+  o         Open in a horizontal split.
+  v         Open in a vertical split.
+  t         Open in a new tab.
+  ]c        Move cursor to the next section header.
+  [c        Move cursor to the previous section header.
+  L         Switch to the next tab (filter by section).
+  H         Switch to the previous tab.
+
+FOLDING ~
+
+  za / zA   Toggle fold under cursor.
+            On a category header: expand/collapse its items.
+            On a regular item:   collapse its parent category.
+  zo        Open fold (expand).
+  zc        Close fold (collapse).
+  zR        Open all folds.
+  zM        Close all folds.
+
+Fold state is persisted across panel closes and restored on next open.
+
+ACTIONS ~
+
+  r         Re-run fallow (background; no loading flash while panel is open).
+  P         Peek — open a floating preview of the file at the finding.
+            Move the cursor or press P again to close the float.
+  K         Detail float — show path, export name, kind, and suggested
+            actions for the finding under the cursor. Press Esc/K/q or
+            move the cursor to close.
+  ga        LSP code action — jump to the file and trigger
+            vim.lsp.buf.code_action(). Requires fallow-lsp to be attached.
+  Q         Send all visible findings to the quickfix list, then open it.
+  y         Yank the relative path (and line number) of the finding to
+            the + and " registers.
+  gf        Open findings in the fuzzy picker (same as :VallowSearch).
+  %         Filter by the file under the cursor. Press % again to clear.
+  f         Open an inline filter prompt. Type to narrow by file path or
+            export name. Enter to confirm, Esc to clear and close.
+  F         Clear the active filter immediately.
+  q         Close the vallow panel.
+  ?         Open the quick-help float.
+
+==============================================================================
+6. CONFIGURATION                                          *vallow-config*
+
+Pass options to |vallow.setup()|. All keys are optional. >lua
+
+  require("vallow").setup({
+
+    -- Path to the fallow executable. Defaults to "fallow" (must be in PATH).
+    fallow_cmd = "fallow",
+
+    -- Extra CLI flags forwarded verbatim to every fallow invocation.
+    -- See |vallow-cli-flags| for useful values.
+    fallow_args = {},
+
+    -- Which analyses to run. Remove entries to disable entire sections.
+    --   "dead-code"  →  Unused Code + Issues + Architecture sections
+    --   "dupes"      →  Duplicates section
+    --   "health"     →  Health section (score, hotspots, targets)
+    analyses = { "dead-code", "dupes", "health" },
+
+    -- Panel window position and size.
+    window = {
+      position = "right",   -- "left" | "right" | "top" | "bottom"
+      size     = 0.5,       -- fraction of the editor (0.1 – 0.9)
+    },
+
+    -- Silently re-run fallow N ms after saving a JS/TS/package.json file.
+    -- Only fires for files inside the detected project root.
+    -- false = disabled (default).
+    auto_refresh = false,
+
+    -- Inline diagnostics pushed to open buffers.
+    diagnostics = {
+      enabled = true,
+    },
+
+    -- Max findings shown per category before a "N more…" expand row.
+    -- Press <CR> on that row to show all.
+    max_items = 30,
+
+    -- Reorder the section tabs. Keys must match the sections table below.
+    -- section_order = { "health", "issues", "unused_code", "duplicates", "architecture" },
+
+    -- Keymaps inside the panel (set a key to "" to disable it).
+    keymaps = {
+      close         = "q",
+      jump          = "<CR>",
+      refresh       = "r",
+      toggle_fold   = nil,    -- nil = use za/zo/zc (always available)
+      next_section  = "]c",
+      prev_section  = "[c",
+      next_tab      = "L",
+      prev_tab      = "H",
+      filter        = "f",
+      clear_filter  = "F",
+      pick          = "gf",
+    },
+
+    -- Statusline component text prefix.
+    statusline = {
+      prefix = "vallow ",  -- e.g. " " for a Nerd Font icon
+    },
+  })
+<
+
+                                                        *vallow-cli-flags*
+USEFUL fallow_args VALUES ~
+
+  Only run specific checks: >lua
+    fallow_args = { "--unused-exports", "--circular-deps" }
+<
+  Production mode (exclude test/dev files): >lua
+    fallow_args = { "--production" }
+<
+  Scope to files changed since main: >lua
+    fallow_args = { "--changed-since", "main" }
+<
+  Raise complexity thresholds (fewer warnings): >lua
+    fallow_args = { "--max-cyclomatic", "30", "--max-cognitive", "20" }
+<
+  Skip the incremental cache: >lua
+    fallow_args = { "--no-cache" }
+<
+
+==============================================================================
+7. FINDING CATEGORIES                                    *vallow-categories*
+
+UNUSED CODE ~
+
+  Unused Exports        Exported values (functions, classes, constants) that
+                        no other file in the workspace imports.
+
+  Unused Files          Files not reachable from any entry point.
+
+  Unused Types          TypeScript types and interfaces with no importers.
+
+  Unused Members        Enum members and class methods / properties that are
+                        never referenced (inheritance-aware).
+
+  Dependencies          Packages listed in dependencies / devDependencies /
+                        optionalDependencies that no file imports.
+
+  Unlisted Deps         Packages your code imports but that are missing from
+                        package.json. Jumps to package.json when no location
+                        is available.
+
+ISSUES ~
+
+  Unresolved Imports    Import specifiers that cannot be resolved. Grouped
+                        by specifier with file:line sub-rows showing every
+                        occurrence. Common causes: missing package, wrong
+                        tsconfig path alias, or a typo.
+
+  Circular Deps         Import cycles in the module graph. Each row shows
+                        the full cycle chain (a → b → c → a). Jump to the
+                        entry file of the cycle.
+
+  Duplicate Exports     The same name exported from multiple files. Shows
+                        all locations so you can consolidate.
+
+DUPLICATES ~
+
+  Clone Groups          Blocks of code duplicated across files. Shows the
+                        suggested name, line count, and number of copies.
+                        Sub-rows are each individual instance.
+
+HEALTH ~
+
+  Complexity            Functions that exceed cyclomatic or cognitive
+                        complexity thresholds. Columns: name, file, cyc,
+                        cog. Colour-coded by severity.
+
+  Hotspot Candidates    Files with high complexity AND high git churn —
+                        the riskiest places to touch. Score is relative to
+                        the batch maximum.
+
+  Refactoring           Ranked list of refactoring targets with a
+                        recommendation and priority.
+
+  Score                 Overall project health score (0-100) and grade,
+                        shown at the top of the Health section.
+
+ARCHITECTURE ~
+
+  Boundary Violations   Imports that cross a forbidden zone boundary defined
+                        in .fallowrc.json. Shows file, import, and which
+                        boundary was violated.
+
+==============================================================================
+8. FALLOW CONFIG FILE                                     *vallow-fallowrc*
+
+fallow reads .fallowrc.json (or fallow.toml) from your project root.
+Generate one with: >sh
+  fallow init
+<
+
+ENTRY POINTS ~
+
+Tell fallow which files are public entry points (exports from these files
+are never reported as unused): >json
+  {
+    "entry": ["src/index.ts", "scripts/build.ts", "src/workers/*.ts"]
+  }
+<
+
+IGNORE PATTERNS ~
+>json
+  {
+    "ignorePatterns": [
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "dist/**",
+      "**/*.generated.*"
+    ]
+  }
+<
+
+IGNORE SPECIFIC EXPORTS ~
+>json
+  {
+    "ignoreExports": [
+      { "file": "src/utils.ts", "exports": ["internalHelper"] },
+      { "file": "src/types.ts", "exports": ["*"] }
+    ]
+  }
+<
+
+IGNORE DEPENDENCIES ~
+>json
+  {
+    "ignoreDependencies": ["typescript", "autoprefixer"]
+  }
+<
+
+IGNORE UNRESOLVED IMPORTS ~
+>json
+  {
+    "ignoreUnresolvedImports": ["@example/icons", "@example/icons/**"]
+  }
+<
+
+RULE SEVERITY ~
+
+  "error"  Report and exit 1 with --fail-on-issues.
+  "warn"   Report, but do not fail CI.
+  "off"    Skip entirely.
+>json
+  {
+    "rules": {
+      "unused-files":       "error",
+      "unused-exports":     "error",
+      "unused-types":       "warn",
+      "circular-dependencies": "warn",
+      "boundary-violations": "error",
+      "code-duplication":   "warn",
+      "complexity":         "warn",
+      "private-type-leaks": "off"
+    }
+  }
+<
+
+ARCHITECTURE BOUNDARIES ~
+
+Use a preset or define custom zones: >json
+  {
+    "boundaries": {
+      "preset": "layered",
+      "zones": [
+        { "name": "app",      "patterns": ["src/app/**"] },
+        { "name": "features", "patterns": ["src/features/**"] },
+        { "name": "shared",   "patterns": ["src/shared/**"] }
+      ],
+      "rules": [
+        { "from": "app",      "allow": ["features", "shared"] },
+        { "from": "features", "allow": ["shared"] }
+      ]
+    }
+  }
+<
+Available presets: "bulletproof", "layered", "hexagonal", "feature-sliced"
+
+HEALTH THRESHOLDS ~
+>json
+  {
+    "health": {
+      "maxCyclomatic": 20,
+      "maxCognitive":  15,
+      "maxCrap":       30.0
+    }
+  }
+<
+
+DUPLICATION SENSITIVITY ~
+>json
+  {
+    "duplicates": {
+      "mode":           "mild",
+      "minTokens":      50,
+      "minLines":       5,
+      "minOccurrences": 2
+    }
+  }
+<
+Modes: "strict" (fastest), "mild" (default), "weak", "semantic"
+
+MONOREPO / WORKSPACES ~
+>json
+  {
+    "workspaces": {
+      "globs":  ["packages/*/package.json"],
+      "ignore": ["packages/playground"]
+    }
+  }
+<
+
+==============================================================================
+9. SUPPRESSION COMMENTS                                   *vallow-suppress*
+
+Suppress a single finding on the next line: >ts
+  // fallow-ignore-next-line unused-export
+  export const keepThis = fn();
+<
+
+Suppress multiple rules at once: >ts
+  // fallow-ignore-next-line unused-export, complexity
+  export const complexHelper = () => {};
+<
+
+Suppress all findings in a file: >ts
+  // fallow-ignore-file
+<
+
+JSDoc tags (treated as suppression by fallow): >ts
+  /** @internal */
+  export class InternalHelper {}
+
+  /** @public */
+  export function apiFunction() {}
+
+  /** @expected-unused */
+  export const reservedForFuture = fn();
+<
+
+Stale suppressions (suppressing an issue that no longer exists) are
+reported as their own finding type so you can clean them up.
+
+==============================================================================
+10. LUA API                                                    *vallow-api*
+
+                                                          *vallow.setup()*
+vallow.setup({opts})
+    Initialise the plugin with options. See |vallow-config|.
+    Called automatically on VimEnter if you use the plugin without calling
+    setup() yourself (zero-config usage).
+
+                                                         *vallow.toggle()*
+vallow.toggle()
+    Toggle the panel. Equivalent to |:Vallow|.
+
+                                                           *vallow.open()*
+vallow.open()
+    Open the panel. No-op if already open (focuses it instead).
+
+                                                          *vallow.close()*
+vallow.close()
+    Close the panel.
+
+                                                        *vallow.refresh()*
+vallow.refresh()
+    Force a fresh fallow run. Shows loading state. Equivalent to
+    |:VallowRefresh|.
+
+                                                          *vallow.focus()*
+vallow.focus()
+    Focus the panel window if it is open. Useful for keymaps that jump
+    back to the panel from a source file. >lua
+
+      vim.keymap.set("n", "<leader>V", function()
+        require("vallow").focus()
+      end)
+<
+
+                                                       *vallow.prefetch()*
+vallow.prefetch()
+    Run fallow in the background without opening the panel. Called
+    automatically on VimEnter so the first open is instant.
+
+==============================================================================
+11. HEALTH CHECK                                          *vallow-health*
+
+Run: >
+  :checkhealth vallow
+<
+
+Checks performed:
+  • fallow CLI is found in PATH and reports its version.
+  • fallow-lsp is found in PATH (optional, for LSP code actions via ga).
+  • A package.json (or workspace marker) is detected from the current
+    buffer or working directory.
+
+If the health check cannot find a project root, vallow will return empty
+results when you open the panel. Make sure you open Neovim from inside a
+JavaScript/TypeScript project directory.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
