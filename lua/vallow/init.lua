@@ -105,6 +105,139 @@ M.statusline = function()
   return prefix .. (total > 0 and tostring(total) or "✓")
 end
 
+-- Export current findings as markdown into a new scratch buffer.
+M.export = function()
+  local state = require("vallow.panel").state
+  if not state.results or not state.results.findings then
+    vim.notify("vallow: no results — open :Vallow first", vim.log.levels.WARN)
+    return
+  end
+  local md_lines = require("vallow.exporter").to_markdown(state.results)
+  local buf = vim.api.nvim_create_buf(true, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, md_lines)
+  vim.bo[buf].filetype = "markdown"
+  vim.bo[buf].buftype = "nofile"
+  vim.api.nvim_buf_set_name(buf, "vallow://report.md")
+  vim.cmd("split")
+  vim.api.nvim_win_set_buf(0, buf)
+  vim.notify("vallow: report opened — yank or :w to save", vim.log.levels.INFO)
+end
+
+-- Show a compact summary float with per-category counts.
+M.summary = function()
+  local state = require("vallow.panel").state
+  if not state.results then
+    vim.notify("vallow: no results yet — open :Vallow first", vim.log.levels.WARN)
+    return
+  end
+
+  local cfg = require("vallow.config").get()
+  local lines = { "" }
+  local hls = {}
+  local function push(text, hl)
+    table.insert(lines, text)
+    if hl then
+      table.insert(hls, { hl = hl, lnum = #lines - 1 })
+    end
+  end
+
+  local total = 0
+  -- Build ordered sections
+  local sections = {}
+  for s_key, s_cfg in pairs(cfg.sections or {}) do
+    table.insert(sections, { key = s_key, cfg = s_cfg })
+  end
+  table.sort(sections, function(a, b)
+    return a.cfg.order < b.cfg.order
+  end)
+
+  for _, sec in ipairs(sections) do
+    local sec_total = 0
+    local cat_rows = {}
+    for c_key, c_cfg in pairs(cfg.categories or {}) do
+      if c_cfg.section == sec.key then
+        local count = 0
+        if c_cfg.sources then
+          for _, src in ipairs(c_cfg.sources) do
+            local b = state.results.findings and state.results.findings[src]
+            if b then
+              count = count + (b.count or 0)
+            end
+          end
+        else
+          local b = state.results.findings and state.results.findings[c_key]
+          count = b and b.count or 0
+        end
+        if count > 0 then
+          sec_total = sec_total + count
+          table.insert(cat_rows, { label = c_cfg.label, count = count, order = c_cfg.order })
+        end
+      end
+    end
+    if sec_total > 0 then
+      total = total + sec_total
+      table.sort(cat_rows, function(a, b)
+        return a.order < b.order
+      end)
+      push("  " .. (sec.cfg.icon or "") .. " " .. sec.cfg.label, "VallowSection")
+      for _, row in ipairs(cat_rows) do
+        local lbl = "    " .. row.label
+        local cnt = tostring(row.count)
+        local pad = math.max(1, 32 - vim.fn.strdisplaywidth(lbl) - #cnt)
+        push(lbl .. string.rep(" ", pad) .. cnt, "Comment")
+      end
+    end
+  end
+
+  if total == 0 then
+    push("  ✓ No issues found", "VallowFooter")
+  end
+  push("")
+  push(string.format("  %d issue%s total", total, total == 1 and "" or "s"), "VallowFooter")
+  if state.results.duration_ms and state.results.duration_ms > 0 then
+    lines[#lines] = lines[#lines] .. string.format("  (%dms)", state.results.duration_ms)
+  end
+  push("")
+
+  local width = 0
+  for _, l in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(l))
+  end
+  width = math.max(36, math.min(width + 4, vim.o.columns - 8))
+
+  local fbuf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(fbuf, 0, -1, false, lines)
+  vim.bo[fbuf].modifiable = false
+
+  local row = math.floor((vim.o.lines - #lines) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+  local fwin = vim.api.nvim_open_win(fbuf, true, {
+    relative = "editor",
+    row = row,
+    col = col,
+    width = width,
+    height = #lines,
+    style = "minimal",
+    border = "rounded",
+    title = " Vallow Summary ",
+    title_pos = "center",
+  })
+  vim.wo[fwin].cursorline = false
+
+  local ns = vim.api.nvim_create_namespace("vallow_summary")
+  for _, h in ipairs(hls) do
+    vim.api.nvim_buf_add_highlight(fbuf, ns, h.hl, h.lnum, 0, -1)
+  end
+
+  -- Close on any key
+  for _, k in ipairs({ "q", "<Esc>", "<CR>", "<Space>" }) do
+    vim.keymap.set("n", k, function()
+      pcall(vim.api.nvim_win_close, fwin, true)
+      pcall(vim.api.nvim_buf_delete, fbuf, { force = true })
+    end, { buffer = fbuf, nowait = true, silent = true })
+  end
+end
+
 -- Structured counts for custom integrations.
 M.get_counts = function()
   local state = require("vallow.panel").state

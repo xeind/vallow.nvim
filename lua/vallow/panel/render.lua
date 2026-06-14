@@ -215,6 +215,7 @@ M.render = function(buf, results, win)
     { "ga", "fix" },
     { "f", "filter" },
     { "%", "cur file" },
+    { "p", "prod" },
     { "r", "refresh" },
     { "?", "help" },
   }
@@ -278,6 +279,13 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
     for _, item in ipairs(items) do
       local n = item.name or ""
       push(indent .. n, #indent, #indent + #n, "VallowName", item)
+      -- Monorepo hint: dep is unused here but consumed by another workspace package
+      if item.used_in_workspaces and #item.used_in_workspaces > 0 then
+        local ws = table.concat(item.used_in_workspaces, ", ")
+        local sub = "        used in: " .. ws
+        push(sub, 8, 8 + 9, "VallowKind", nil)
+        hl_last(8 + 9, 8 + 9 + #ws, "VallowPath")
+      end
     end
   elseif cat_key == "unresolved_imports" then
     -- Group by specifier so "missing-module" imported in 20 files shows as one header + sub-rows
@@ -433,7 +441,10 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       -- Size: lines is the most meaningful metric
       local size_s = item.lines and (item.lines .. " ln") or ""
       local size_n = tonumber(item.lines) or 0
-      local size_hl = size_n >= 50 and "VallowSevWarn" or size_n >= 20 and "VallowSevHint" or "VallowKind"
+      -- Colour by explicit severity from fallow, fall back to size heuristic
+      local _sev_map = { severe = "VallowSevError", moderate = "VallowSevWarn", mild = "VallowSevHint" }
+      local size_hl = _sev_map[item.severity]
+        or (size_n >= 50 and "VallowSevWarn" or size_n >= 20 and "VallowSevHint" or "VallowKind")
 
       -- Instance count: × prefix reads more naturally than "N inst"
       local cnt_s = n_inst > 0 and ("\xc3\x97" .. n_inst) or "" -- × U+00D7
@@ -646,6 +657,26 @@ M._render_items = function(cat_key, items, push, hl_last, lines, win_width)
       end
       if trend_s ~= "" then
         hl_last(tr_pos, tr_pos + #trend_s, trend_hl)
+      end
+      -- Bus factor + top contributor sub-row
+      if item.bus_factor or item.top_contributor then
+        local sub = "        "
+        local parts = {}
+        if item.bus_factor then
+          table.insert(parts, "bus factor: " .. item.bus_factor)
+        end
+        if item.top_contributor and item.top_contributor.identifier then
+          local pct = item.top_contributor.share and math.floor(item.top_contributor.share * 100 + 0.5)
+          local contrib = item.top_contributor.identifier
+          if pct then
+            contrib = contrib .. " " .. pct .. "%"
+          end
+          table.insert(parts, contrib)
+        end
+        if #parts > 0 then
+          local meta = sub .. table.concat(parts, "  ·  ")
+          push(meta, #sub, -1, "VallowKind", nil)
+        end
       end
     end
   elseif cat_key == "health_targets" then

@@ -25,3 +25,11 @@ vim.api.nvim_create_user_command("VallowSearch", function()
   end
   require("vallow.picker").open(results)
 end, { desc = "Search vallow findings with snacks/telescope/fzf-lua" })
+
+vim.api.nvim_create_user_command("VallowExport", function()
+  require("vallow").export()
+end, { desc = "Export vallow findings as markdown in a new buffer" })
+
+vim.api.nvim_create_user_command("VallowSummary", function()
+  require("vallow").summary()
+end, { desc = "Show a compact findings summary float" })

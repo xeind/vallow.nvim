@@ -55,6 +55,10 @@ M.run = function(callback)
   -- Combined mode: plain fallow run. Health flags only go through _run_separate
   -- (fallow combined mode may not support --score/--hotspots/--targets).
   local cmd = { cfg.fallow_cmd, "--format", "json", "--quiet" }
+  -- Production mode: exclude test/dev files (toggled via `p` in the panel)
+  if require("vallow.panel").state.production then
+    table.insert(cmd, "--production")
+  end
   for _, a in ipairs(cfg.fallow_args or {}) do
     table.insert(cmd, a)
   end
@@ -309,6 +313,7 @@ M._normalize = function(raw, root)
       name = name,
       kind = kind,
       actions = item.actions,
+      introduced = item.introduced,
     })
   end
   for _, v in ipairs(check.unused_exports or {}) do
@@ -344,6 +349,7 @@ M._normalize = function(raw, root)
       path = item.path or "",
       relative_path = rel(item.path),
       lnum = item.line or 1,
+      used_in_workspaces = item.used_in_workspaces,
     })
   end
   for _, v in ipairs(check.unused_dependencies or {}) do
@@ -497,6 +503,7 @@ M._normalize = function(raw, root)
       locations = locs,
       tokens = g.tokens,
       lines = g.lines or g.line_count or g.lineCount or g.num_lines,
+      severity = g.severity, -- "mild" | "moderate" | "severe"
     })
   end
   findings.clone_groups.count = #findings.clone_groups.items
@@ -522,6 +529,8 @@ M._normalize = function(raw, root)
       score = v.score,
       commits = v.commits,
       trend = v.trend,
+      bus_factor = v.bus_factor,
+      top_contributor = v.top_contributor, -- { identifier, share }
     })
   end
   findings.health_hotspots.count = #findings.health_hotspots.items

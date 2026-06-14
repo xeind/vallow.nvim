@@ -5,6 +5,7 @@ M.state = {
   win = nil,
   results = nil,
   current_section = nil, -- nil = ALL tabs visible
+  production = false, -- when true, fallow runs with --production
   -- Fold state persisted across panel closes (buffer variables are wiped with the buffer)
   fold_secs = {},
   fold_cats = {},
@@ -13,6 +14,19 @@ M.state = {
 
 -- Debounce timer for auto-refresh
 local _refresh_timer = nil
+
+local function _count_total(results)
+  if not results or not results.findings then
+    return -1
+  end
+  local n = 0
+  for _, b in pairs(results.findings) do
+    if type(b) == "table" and b.count then
+      n = n + b.count
+    end
+  end
+  return n
+end
 
 M.open = function()
   if M._is_open() then
@@ -185,7 +199,9 @@ M._bg_refresh = function()
     _refresh_timer:close()
     _refresh_timer = nil
   end
+  local old_total = _count_total(M.state.results)
   require("vallow.runner").run(function(results)
+    local new_total = _count_total(results)
     M.state.results = results
     if M._is_open() then
       require("vallow.panel.render").render(M.state.buf, results, M.state.win)
@@ -195,9 +211,37 @@ M._bg_refresh = function()
         results,
         require("vallow.config").get()
       )
+    elseif old_total >= 0 and new_total ~= old_total then
+      -- Panel is closed — notify about count change
+      local diff = new_total - old_total
+      if diff > 0 then
+        vim.notify(
+          string.format("vallow: +%d new issue%s (%d total)", diff, diff == 1 and "" or "s", new_total),
+          vim.log.levels.WARN
+        )
+      else
+        vim.notify(
+          string.format("vallow: %d issue%s fixed (%d remaining)", -diff, -diff == 1 and "" or "s", new_total),
+          vim.log.levels.INFO
+        )
+      end
     end
     require("vallow.diagnostics").apply(results.findings)
   end)
+end
+
+-- Toggle production mode (excludes test/dev files) and re-run.
+M.toggle_production = function()
+  M.state.production = not M.state.production
+  vim.notify(
+    "vallow: production mode " .. (M.state.production and "ON (test files excluded)" or "OFF"),
+    vim.log.levels.INFO
+  )
+  if M._is_open() then
+    M.refresh()
+  else
+    M.prefetch()
+  end
 end
 
 -- Run fallow in the background without opening the panel.

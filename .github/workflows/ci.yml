@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check formatting (stylua)
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check lua/
+
+      - name: Lint (selene)
+        run: |
+          curl -sL "$(curl -s https://api.github.com/repos/Kampfkarren/selene/releases/latest \
+            | grep 'browser_download_url.*linux.*zip' \
+            | head -1 \
+            | cut -d'"' -f4)" -o selene.zip
+          unzip -q selene.zip selene
+          chmod +x selene
+          ./selene lua/

@@ -75,6 +75,34 @@ M.setup = function(buf)
     M.set_all_folds(buf, false)
   end)
 
+  -- Mouse: double-click to jump/fold (single click just moves cursor)
+  map("<2-LeftMouse>", function()
+    M._do_jump(buf, "edit")
+  end)
+
+  -- Panel resize (works for both vertical and horizontal splits)
+  map(">", function()
+    local pos = require("vallow.config").get().window.position or "right"
+    if pos == "left" or pos == "right" then
+      vim.cmd("vertical resize +5")
+    else
+      vim.cmd("resize +5")
+    end
+  end)
+  map("<", function()
+    local pos = require("vallow.config").get().window.position or "right"
+    if pos == "left" or pos == "right" then
+      vim.cmd("vertical resize -5")
+    else
+      vim.cmd("resize -5")
+    end
+  end)
+
+  -- Production mode toggle: re-runs fallow with --production (excludes test/dev files)
+  map("p", function()
+    require("vallow.panel").toggle_production()
+  end)
+
   -- Actions
   map("Q", function()
     M.send_to_qf(buf)
@@ -573,6 +601,9 @@ M.detail = function(buf)
   end
   if item.kind and item.kind ~= "" then
     push("  kind: " .. item.kind, "VallowKind")
+  end
+  if item.introduced and item.introduced ~= vim.NIL and item.introduced ~= "" then
+    push("  since: " .. tostring(item.introduced), "VallowKind")
   end
 
   if item.actions and #item.actions > 0 then

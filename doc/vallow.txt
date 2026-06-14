@@ -83,6 +83,16 @@ subsequent opens results are shown instantly from cache.
     Open all findings in a fuzzy picker (Snacks → Telescope → fzf-lua,
     in priority order). Results must already be loaded.
 
+                                                            *:VallowExport*
+:VallowExport
+    Export current findings as GitHub-flavoured markdown into a new
+    scratch buffer. From there, yank or :w to save/paste into a PR.
+
+                                                           *:VallowSummary*
+:VallowSummary
+    Open a compact floating summary showing per-category counts.
+    Close with q, <Esc>, <CR>, or <Space>.
+
 ==============================================================================
 5. PANEL KEYMAPS                                          *vallow-keymaps*
 
@@ -130,6 +140,12 @@ ACTIONS ~
   f         Open an inline filter prompt. Type to narrow by file path or
             export name. Enter to confirm, Esc to clear and close.
   F         Clear the active filter immediately.
+  p         Toggle production mode — re-runs fallow with --production
+            (excludes test/story/spec files). Press again to turn off.
+  >         Widen the panel by 5 columns (vertical split) or 5 rows.
+  <         Narrow the panel by 5 columns or rows.
+  <2-LeftMouse>
+            Double-click to jump or toggle fold (same as <CR>).
   q         Close the vallow panel.
   ?         Open the quick-help float.
 
