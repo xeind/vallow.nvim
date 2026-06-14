@@ -79,11 +79,15 @@ M.open = function()
         _refresh_timer = nil
       end
       _refresh_timer = vim.uv.new_timer()
-      _refresh_timer:start(500, 0, vim.schedule_wrap(function()
-        _refresh_timer:close()
-        _refresh_timer = nil
-        M._bg_refresh()
-      end))
+      _refresh_timer:start(
+        500,
+        0,
+        vim.schedule_wrap(function()
+          _refresh_timer:close()
+          _refresh_timer = nil
+          M._bg_refresh()
+        end)
+      )
     end,
   })
 
