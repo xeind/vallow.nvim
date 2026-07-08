@@ -20,11 +20,11 @@ jobs:
           args: --check lua/
 
       - name: Lint (selene)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -sL "$(curl -s https://api.github.com/repos/Kampfkarren/selene/releases/latest \
-            | grep 'browser_download_url.*linux.*zip' \
-            | head -1 \
-            | cut -d'"' -f4)" -o selene.zip
-          unzip -q selene.zip selene
+          gh release download --repo Kampfkarren/selene \
+            --pattern '*x86_64*linux*gnu.zip' --dir /tmp/selene
+          unzip -q /tmp/selene/*.zip selene
           chmod +x selene
           ./selene lua/
