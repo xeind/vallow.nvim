@@ -22,6 +22,7 @@ M.create = function()
   vim.wo[win].winfixwidth = cfg.position == "left" or cfg.position == "right"
   vim.wo[win].cursorline = true
   vim.wo[win].scrolloff = 3
+  vim.wo[win].foldenable = false
 
   vim.bo[buf].filetype = "vallow"
 

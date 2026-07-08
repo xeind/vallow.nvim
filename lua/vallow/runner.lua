@@ -480,6 +480,40 @@ M._normalize = function(raw, root)
   end
   findings.boundary_violations.count = #findings.boundary_violations.items
 
+  -- dev_dependency_in_production[] (v3.1+)
+  for _, v in ipairs(check.dev_dependency_in_production or {}) do
+    table.insert(findings.dev_dep_in_prod.items, {
+      name = v.package_name or v.packageName or v.package or "",
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
+      lnum = v.line or v.lnum or 1,
+      col = v.col or 0,
+      actions = v.actions,
+    })
+  end
+  findings.dev_dep_in_prod.count = #findings.dev_dep_in_prod.items
+
+  -- css_token_drift[] + raw_style_value[] (v3.0+ styling in audit)
+  local function push_style(bucket, item)
+    table.insert(bucket.items, {
+      path = abs(item.path or ""),
+      relative_path = rel(abs(item.path or "")),
+      lnum = item.line or item.lnum or 1,
+      col = item.col or 0,
+      name = item.property or item.token or item.rule or "",
+      kind = item.raw_value or item.value or item.expected_token or "",
+      actions = item.actions,
+    })
+  end
+  for _, v in ipairs(check.css_token_drift or {}) do
+    push_style(findings.css_token_drift, v)
+  end
+  for _, v in ipairs(check.raw_style_value or {}) do
+    push_style(findings.raw_style_value, v)
+  end
+  findings.css_token_drift.count = #findings.css_token_drift.items
+  findings.raw_style_value.count = #findings.raw_style_value.items
+
   -- clone_groups[] from dupes
   -- Live fallow uses several field-name variants across versions:
   --   path: "path" | "file" | "file_path" | "filePath"
@@ -569,6 +603,9 @@ M._normalize = function(raw, root)
     "duplicate_exports",
     "circular_deps",
     "boundary_violations",
+    "dev_dep_in_prod",
+    "css_token_drift",
+    "raw_style_value",
     "health_complexity",
   }
   for _, key in ipairs(sortable) do
@@ -618,8 +655,13 @@ M._empty_findings = function()
     duplicate_exports = { count = 0, items = {} },
     circular_deps = { count = 0, items = {} },
     boundary_violations = { count = 0, items = {} },
+    -- ISSUES (v3.1+)
+    dev_dep_in_prod = { count = 0, items = {} },
     -- DUPLICATES
     clone_groups = { count = 0, items = {} },
+    -- STYLING (fallow audit v3.0+)
+    css_token_drift = { count = 0, items = {} },
+    raw_style_value = { count = 0, items = {} },
     -- HEALTH
     health_complexity = { count = 0, items = {} },
     health_hotspots = { count = 0, items = {} },

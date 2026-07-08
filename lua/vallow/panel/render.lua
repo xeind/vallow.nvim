@@ -146,6 +146,9 @@ M.render = function(buf, results, win)
             local sc = hs.score and math.floor((hs.score or 0) + 0.5) or "?"
             local gr = hs.grade and (" · " .. hs.grade) or ""
             push(string.format("    Score  %s/100%s", sc, gr), 4, -1, "VallowFooter")
+            if hs.max_unit_size_threshold then
+              push(string.format("    Max fn  %d LOC", hs.max_unit_size_threshold), 4, -1, "VallowKind")
+            end
           end
 
           -- Categories
@@ -669,6 +672,38 @@ M._render_items = function(cat_key, items, push, hl_last, win_width)
         if #parts > 0 then
           local meta = sub .. table.concat(parts, "  ·  ")
           push(meta, #sub, -1, "VallowKind", nil)
+        end
+      end
+    end
+  elseif cat_key == "dev_dep_in_prod" then
+    for _, item in ipairs(items) do
+      local n = item.name or ""
+      push(indent .. n, #indent, #indent + #n, "VallowName", item)
+      if item.relative_path and item.relative_path ~= "" then
+        local ln = item.lnum and (":" .. item.lnum) or ""
+        local sub = "        " .. item.relative_path .. ln
+        push(sub, 8, 8 + #item.relative_path, "VallowPath", nil)
+        if ln ~= "" then
+          hl_last(8 + #item.relative_path, 8 + #item.relative_path + #ln, "VallowKind")
+        end
+      end
+    end
+  elseif cat_key == "css_token_drift" or cat_key == "raw_style_value" then
+    for _, item in ipairs(items) do
+      local icon = file_icon(item.relative_path or "")
+      local p = M._truncate(item.relative_path or "", win_width - #indent - #icon - 10)
+      local ln = item.lnum and (":" .. item.lnum) or ""
+      local row = indent .. icon .. p .. ln
+      push(row, #indent, #indent + #icon + #p, "VallowPath", item)
+      if ln ~= "" then
+        hl_last(#indent + #icon + #p, #indent + #icon + #p + #ln, "VallowKind")
+      end
+      if item.name and item.name ~= "" then
+        local prop = "        " .. item.name
+        local val = item.kind and item.kind ~= "" and ("  →  " .. item.kind) or ""
+        push(prop .. val, 8, 8 + #item.name, "VallowKind", nil)
+        if val ~= "" then
+          hl_last(8 + #item.name, 8 + #item.name + #val, "Comment")
         end
       end
     end

@@ -20,6 +20,9 @@ M.label = {
   health_complexity = "high complexity",
   health_hotspots = "hotspot",
   health_targets = "refactor target",
+  dev_dep_in_prod = "dev dep in production",
+  css_token_drift = "CSS token drift",
+  raw_style_value = "raw style value",
 }
 
 return M

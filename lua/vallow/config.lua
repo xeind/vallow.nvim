@@ -50,6 +50,13 @@ M.defaults = {
     },
     unlisted_deps = { icon = "󰌶", label = "Unlisted Deps", section = "unused_code", order = 6, severity = "warn" },
     -- ISSUES (actual bugs — error/warn severity)
+    dev_dep_in_prod = {
+      icon = "󰒓",
+      label = "Dev Deps in Production",
+      section = "issues",
+      order = 0,
+      severity = "error",
+    },
     unresolved_imports = {
       icon = "󰌶",
       label = "Unresolved Imports",
@@ -64,6 +71,20 @@ M.defaults = {
       section = "issues",
       order = 3,
       severity = "warn",
+    },
+    css_token_drift = {
+      icon = "󰏘",
+      label = "CSS Token Drift",
+      section = "issues",
+      order = 4,
+      severity = "warn",
+    },
+    raw_style_value = {
+      icon = "󰏘",
+      label = "Raw Style Values",
+      section = "issues",
+      order = 5,
+      severity = "hint",
     },
     -- DUPLICATES
     clone_groups = { icon = "󰏗", label = "Clone Groups", section = "duplicates", order = 1, severity = "hint" },
