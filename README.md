@@ -5,7 +5,7 @@ fallow for Neovim. See your unused code, duplicates, and health in a native spli
 Powered by [fallow](https://github.com/fallow-rs/fallow), a sub-second static analysis
 engine for JS/TS. No tree-sitter, no LSP, no config needed on the Neovim side.
 
-![vallow panel](vallow-preview.png)
+![vallow panel](vallow-prev.png)
 
 ## Requirements
 
