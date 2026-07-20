@@ -555,9 +555,8 @@ M.peek = function(buf)
   local close_keys = { "<Esc>", "P" }
 
   local function cleanup()
-    for _, k in ipairs(close_keys) do
-      pcall(vim.keymap.del, "n", k, { buffer = buf })
-    end
+    pcall(vim.keymap.del, "n", "<Esc>", { buffer = buf })
+    vim.keymap.set("n", "P", function() M.peek(buf) end, { buffer = buf, nowait = true, silent = true })
     close()
   end
 
@@ -648,9 +647,9 @@ M.detail = function(buf)
   local detail_keys = { "<Esc>", "K", "q" }
 
   local function close_detail()
-    for _, k in ipairs(detail_keys) do
-      pcall(vim.keymap.del, "n", k, { buffer = buf })
-    end
+    pcall(vim.keymap.del, "n", "<Esc>", { buffer = buf })
+    pcall(vim.keymap.del, "n", "q", { buffer = buf })
+    vim.keymap.set("n", "K", function() M.detail(buf) end, { buffer = buf, nowait = true, silent = true })
     pcall(vim.api.nvim_win_close, fwin, true)
     pcall(vim.api.nvim_buf_delete, fbuf, { force = true })
   end
