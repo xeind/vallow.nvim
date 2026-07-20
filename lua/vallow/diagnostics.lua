@@ -21,6 +21,9 @@ local LINE_CATS = {
   "duplicate_exports",
   "circular_deps",
   "health_complexity",
+  "dev_dep_in_prod",
+  "css_token_drift",
+  "raw_style_value",
 }
 
 -- Severity per finding category
@@ -39,6 +42,9 @@ local SEVERITY = {
   circular_deps = vim.diagnostic.severity.WARN,
   clone_groups = vim.diagnostic.severity.HINT,
   health_complexity = vim.diagnostic.severity.WARN,
+  dev_dep_in_prod = vim.diagnostic.severity.ERROR,
+  css_token_drift = vim.diagnostic.severity.WARN,
+  raw_style_value = vim.diagnostic.severity.HINT,
 }
 
 local LABEL = require("vallow.labels").label

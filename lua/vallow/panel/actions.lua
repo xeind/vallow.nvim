@@ -648,7 +648,8 @@ M.detail = function(buf)
 
   local function close_detail()
     pcall(vim.keymap.del, "n", "<Esc>", { buffer = buf })
-    pcall(vim.keymap.del, "n", "q", { buffer = buf })
+    local cfg_km = require("vallow.config").get().keymaps
+    vim.keymap.set("n", cfg_km.close, function() require("vallow.panel").close() end, { buffer = buf, nowait = true, silent = true })
     vim.keymap.set("n", "K", function() M.detail(buf) end, { buffer = buf, nowait = true, silent = true })
     pcall(vim.api.nvim_win_close, fwin, true)
     pcall(vim.api.nvim_buf_delete, fbuf, { force = true })

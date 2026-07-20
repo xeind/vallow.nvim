@@ -149,26 +149,25 @@ end
 
 M._run_separate = function(gen, root, cfg, callback)
   local analyses = cfg.analyses or { "dead-code", "dupes", "health" }
+  local production = require("vallow.panel").state.production
+  local extra = cfg.fallow_args or {}
   local jobs = {}
   for _, a in ipairs(analyses) do
     if a == "dead-code" then
-      jobs[#jobs + 1] = { key = "dead_code", cmd = { cfg.fallow_cmd, "dead-code", "--format", "json", "--quiet" } }
+      local cmd = { cfg.fallow_cmd, "dead-code", "--format", "json", "--quiet" }
+      if production then table.insert(cmd, "--production") end
+      for _, arg in ipairs(extra) do table.insert(cmd, arg) end
+      jobs[#jobs + 1] = { key = "dead_code", cmd = cmd }
     elseif a == "dupes" then
-      jobs[#jobs + 1] = { key = "dupes", cmd = { cfg.fallow_cmd, "dupes", "--format", "json", "--quiet" } }
+      local cmd = { cfg.fallow_cmd, "dupes", "--format", "json", "--quiet" }
+      if production then table.insert(cmd, "--production") end
+      for _, arg in ipairs(extra) do table.insert(cmd, arg) end
+      jobs[#jobs + 1] = { key = "dupes", cmd = cmd }
     elseif a == "health" then
-      jobs[#jobs + 1] = {
-        key = "health",
-        cmd = {
-          cfg.fallow_cmd,
-          "health",
-          "--format",
-          "json",
-          "--quiet",
-          "--score",
-          "--hotspots",
-          "--targets",
-        },
-      }
+      local cmd = { cfg.fallow_cmd, "health", "--format", "json", "--quiet", "--score", "--hotspots", "--targets" }
+      if production then table.insert(cmd, "--production") end
+      for _, arg in ipairs(extra) do table.insert(cmd, arg) end
+      jobs[#jobs + 1] = { key = "health", cmd = cmd }
     end
   end
 
