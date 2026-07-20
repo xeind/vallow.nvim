@@ -110,6 +110,9 @@ M.setup = function(buf)
   map("y", function()
     M.yank_path(buf)
   end)
+  map("yn", function()
+    M.yank_name(buf)
+  end)
   map("P", function()
     M.peek(buf)
   end)
@@ -381,6 +384,22 @@ M.send_to_qf = function(buf)
 end
 
 -- ── Yank path ────────────────────────────────────────────────────────
+
+M.yank_name = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then
+    vim.notify("vallow: nothing to yank", vim.log.levels.INFO)
+    return
+  end
+  local text = item.name or ""
+  if text == "" then
+    vim.notify("vallow: no name on this item", vim.log.levels.INFO)
+    return
+  end
+  vim.fn.setreg("+", text)
+  vim.fn.setreg('"', text)
+  vim.notify('vallow: copied "' .. text .. '"', vim.log.levels.INFO)
+end
 
 M.yank_path = function(buf)
   local item = M._item_at_cursor(buf)

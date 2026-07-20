@@ -25,7 +25,7 @@ local SECTIONS = {
   {
     title = "Search",
     keys = {
-      { key = "f", desc = "filter (inline bar)" },
+      { key = "f", desc = "filter by file/name/category" },
       { key = "F", desc = "clear filter" },
       { key = "gf", desc = "open picker" },
     },
@@ -40,6 +40,7 @@ local SECTIONS = {
       { key = "r", desc = "refresh" },
       { key = "Q", desc = "send to quickfix list" },
       { key = "y", desc = "yank path:line" },
+      { key = "yn", desc = "yank finding name/symbol" },
       { key = "q", desc = "close panel" },
       { key = "?", desc = "this help" },
     },

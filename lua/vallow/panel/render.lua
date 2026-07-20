@@ -81,6 +81,16 @@ M.render = function(buf, results, win)
     return (item.relative_path or ""):lower():find(filter_query, 1, true) ~= nil
       or (item.name or ""):lower():find(filter_query, 1, true) ~= nil
   end
+  -- Returns true when the filter query matches the category itself (label or key).
+  -- In that case all items in the category are shown regardless of path/name.
+  local function cat_matches(cat_key, cat_cfg)
+    if filter_query == "" then
+      return false
+    end
+    local label = (cat_cfg.label or ""):lower()
+    local key_norm = cat_key:lower():gsub("_", " ")
+    return label:find(filter_query, 1, true) ~= nil or key_norm:find(filter_query, 1, true) ~= nil
+  end
 
   -- Show active filter in header
   if filter_query ~= "" then
@@ -108,7 +118,11 @@ M.render = function(buf, results, win)
         local d = M._resolve_findings(cat.key, cat.cfg, results.findings)
         if d then
           if filter_query ~= "" then
-            sec_total = sec_total + #vim.tbl_filter(matches, d.items)
+            if cat_matches(cat.key, cat.cfg) then
+              sec_total = sec_total + (d.count or 0)
+            else
+              sec_total = sec_total + #vim.tbl_filter(matches, d.items)
+            end
           else
             sec_total = sec_total + (d.count or 0)
           end
@@ -155,9 +169,10 @@ M.render = function(buf, results, win)
           for _, cat in ipairs(sec.cats) do
             local d = M._resolve_findings(cat.key, cat.cfg, results.findings)
             if d and d.count > 0 then
-              -- Apply filter to items
+              -- Apply filter to items (skip if the filter matched the category itself)
               local items = d.items
-              if filter_query ~= "" then
+              local cat_filter_hit = cat_matches(cat.key, cat.cfg)
+              if filter_query ~= "" and not cat_filter_hit then
                 items = vim.tbl_filter(matches, items)
               end
 
@@ -166,8 +181,9 @@ M.render = function(buf, results, win)
                 local cat_fold = cat_open and "▼" or "▶"
                 local sev_hl = hls.sev_hl[cat.cfg.severity] or "VallowHeader"
 
-                -- Show filtered count vs total when filter active
-                local cat_cnt = filter_query ~= "" and (tostring(#items) .. "/" .. tostring(d.count))
+                -- Show filtered count vs total when filter active (not for category-level matches)
+                local cat_cnt = (filter_query ~= "" and not cat_filter_hit and #items < d.count)
+                    and (tostring(#items) .. "/" .. tostring(d.count))
                   or tostring(d.count)
                 local cat_lbl = string.format("    %s %s %s", cat_fold, cat.cfg.icon, cat.cfg.label)
                 local cat_padded = M._dpad(cat_lbl, 34)
