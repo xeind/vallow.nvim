@@ -11,6 +11,9 @@ M.setup = function(buf)
   map(cfg.close, function()
     panel.close()
   end)
+  map("<Esc>", function()
+    panel.close()
+  end)
   map(cfg.refresh, function()
     panel.refresh()
   end)
@@ -19,6 +22,9 @@ M.setup = function(buf)
   end)
   map(cfg.prev_tab, function()
     M.switch_tab(buf, -1)
+  end)
+  map("<Tab>", function()
+    M.toggle_fold(buf)
   end)
   if cfg.toggle_fold and cfg.toggle_fold ~= "" then
     map(cfg.toggle_fold, function()
@@ -571,16 +577,23 @@ M.peek = function(buf)
     pcall(vim.api.nvim_win_close, fwin, true)
   end
 
-  local close_keys = { "<Esc>", "P" }
+  local jump_key = require("vallow.config").get().keymaps.jump or "<CR>"
 
   local function cleanup()
     pcall(vim.keymap.del, "n", "<Esc>", { buffer = buf })
     vim.keymap.set("n", "P", function() M.peek(buf) end, { buffer = buf, nowait = true, silent = true })
+    vim.keymap.set("n", jump_key, function() M._do_jump(buf, "edit") end, { buffer = buf, nowait = true, silent = true })
     close()
   end
 
-  -- Close on <Esc>, P, or any cursor movement in the panel
-  for _, k in ipairs(close_keys) do
+  -- <CR>: jump to the peeked item and dismiss the float
+  vim.keymap.set("n", jump_key, function()
+    cleanup()
+    M._do_jump(buf, "edit")
+  end, { buffer = buf, nowait = true, silent = true })
+
+  -- <Esc> / P: dismiss without jumping
+  for _, k in ipairs({ "<Esc>", "P" }) do
     vim.keymap.set("n", k, cleanup, { buffer = buf, nowait = true, silent = true })
   end
   vim.api.nvim_create_autocmd("CursorMoved", {

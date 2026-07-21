@@ -475,6 +475,7 @@ M._normalize = function(raw, root)
       col = v.col or 0,
       import_path = v.import_path or v.importPath or "",
       boundary_name = v.boundary_name or v.boundaryName or "",
+      actions = v.actions,
     })
   end
   findings.boundary_violations.count = #findings.boundary_violations.items

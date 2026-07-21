@@ -15,7 +15,7 @@ local SECTIONS = {
   {
     title = "Folds",
     keys = {
-      { key = "za / <Tab>", desc = "toggle fold" },
+      { key = "za / <Tab>", desc = "toggle fold / expand" },
       { key = "zo", desc = "open fold" },
       { key = "zc", desc = "close fold" },
       { key = "zR", desc = "open all" },
@@ -34,6 +34,7 @@ local SECTIONS = {
     title = "Actions",
     keys = {
       { key = "P", desc = "peek code in float" },
+      { key = "<CR> (in peek)", desc = "jump from peek float" },
       { key = "K", desc = "detail / fix suggestions" },
       { key = "ga", desc = "LSP code action (fallow-lsp)" },
       { key = "%", desc = "filter: current file" },
@@ -41,7 +42,7 @@ local SECTIONS = {
       { key = "Q", desc = "send to quickfix list" },
       { key = "y", desc = "yank path:line" },
       { key = "yn", desc = "yank finding name/symbol" },
-      { key = "q", desc = "close panel" },
+      { key = "q / <Esc>", desc = "close panel" },
       { key = "?", desc = "this help" },
     },
   },
