@@ -106,6 +106,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `i` | Audit mode: hide findings the change inherited |
 | `gi` | Inspect the file on this row |
 | `x` | Ignore this finding: `.fallowrc.json` entry or suppression comment |
+| `ge` | Explain this issue type (`fallow explain`) |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
 | `Q` | Send to quickfix |

@@ -143,6 +143,9 @@ M.setup = function(buf)
   map("x", function()
     M.ignore(buf)
   end)
+  map("ge", function()
+    require("vallow.explain").open(M._category_at_cursor(buf))
+  end)
 end
 
 -- Categories whose findings can be exempted per file with ignoreExports.
@@ -780,6 +783,26 @@ M.detail = function(buf)
   local ns = vim.api.nvim_create_namespace("vallow_detail")
   for _, h in ipairs(hls) do
     vim.api.nvim_buf_add_highlight(fbuf, ns, h.hl, h.lnum, 2, -1)
+  end
+
+  -- The explanation lands asynchronously; append it if the float is still up.
+  local issue_type = require("vallow.explain").issue_type(M._category_at_cursor(buf))
+  if issue_type then
+    require("vallow.explain").get(issue_type, function(data)
+      if not data or not vim.api.nvim_buf_is_valid(fbuf) or not vim.api.nvim_win_is_valid(fwin) then
+        return
+      end
+      local extra = { "", "  " .. (data.summary or "") }
+      for _, seg in ipairs(require("vallow.panel.render")._wrap(data.rationale or "", width - 4)) do
+        table.insert(extra, "  " .. seg)
+      end
+      table.insert(extra, "")
+      table.insert(extra, "  ge for the full explanation")
+      vim.bo[fbuf].modifiable = true
+      vim.api.nvim_buf_set_lines(fbuf, -1, -1, false, extra)
+      vim.bo[fbuf].modifiable = false
+      pcall(vim.api.nvim_win_set_height, fwin, vim.api.nvim_buf_line_count(fbuf))
+    end)
   end
 
   local detail_keys = { "<Esc>", "K", "q" }

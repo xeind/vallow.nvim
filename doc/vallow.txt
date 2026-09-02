@@ -200,6 +200,13 @@ ACTIONS ~
             that only the ones it introduced (marked +) remain.
   gi        Inspect the file on this row — same float as
             |:VallowInspect|.
+  ge        Explain the issue type of the row under the cursor, on a
+            category header or on one of its findings. Runs
+            `fallow explain <issue-type>` and shows the rule, a worked
+            example, fix guidance, and the docs link. Cached per issue
+            type for the session. The K float also gains the first
+            paragraph once it arrives. Hotspots, refactoring targets and
+            raw style values have no explanation.
   x         Ignore the finding under the cursor. |vim.ui.select| offers:
             add the file to ignoreFindings in .fallowrc.json, add the
             export to ignoreExports (unused exports only), or insert the

@@ -382,6 +382,36 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 11. Explain: issue-type mapping, the float, and the per-session cache.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local explain = require("vallow.explain")
+  eq("explain: category maps", explain.issue_type("unused_exports"), "unused-export")
+  eq("explain: merged category maps", explain.issue_type("unused_all_deps"), "unused-dependency")
+  eq("explain: unmapped category", explain.issue_type("health_hotspots"), nil)
+
+  explain._cache = {}
+  explain.get("unused-export", function(data, err)
+    ok("explain: fetched", data ~= nil, tostring(err))
+    eq("explain: id", data and data.id, "fallow/unused-export")
+    ok("explain: cached", explain._cache["unused-export"] ~= nil)
+
+    local cached = false
+    explain.get("unused-export", function()
+      cached = true
+    end)
+    ok("explain: second call is synchronous", cached)
+
+    explain._show(data)
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    ok("explain: title", has_line(lines, "Unused Exports"), vim.inspect(lines))
+    ok("explain: rationale section", has_line(lines, "Why it matters"), vim.inspect(lines))
+    ok("explain: docs link", has_line(lines, "docs%.fallow%.tools"), vim.inspect(lines))
+    vim.api.nvim_win_close(0, true)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

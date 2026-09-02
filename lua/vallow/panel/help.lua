@@ -41,6 +41,7 @@ local SECTIONS = {
       { key = "i", desc = "audit: hide inherited" },
       { key = "gi", desc = "inspect file in float" },
       { key = "x", desc = "ignore finding" },
+      { key = "ge", desc = "explain this issue type" },
       { key = "r", desc = "refresh" },
       { key = "Q", desc = "send to quickfix list" },
       { key = "y", desc = "yank path:line" },
