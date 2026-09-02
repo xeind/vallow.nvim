@@ -376,8 +376,8 @@ M._normalize = function(raw, root)
       or (kind == "member") and findings.unused_class_members
       or findings.unused_exports
     table.insert(bucket.items, {
-      path = item.path or "",
-      relative_path = rel(item.path),
+      path = abs(item.path or ""),
+      relative_path = rel(abs(item.path or "")),
       lnum = item.line or 1,
       col = item.col or 0,
       name = name,
@@ -417,8 +417,8 @@ M._normalize = function(raw, root)
   local function push_dep(item, bucket)
     table.insert(bucket.items, {
       name = item.package_name or item.packageName or item.package or "",
-      path = item.path or "",
-      relative_path = rel(item.path),
+      path = abs(item.path or ""),
+      relative_path = rel(abs(item.path or "")),
       lnum = item.line or 1,
       used_in_workspaces = item.used_in_workspaces,
       introduced = item.introduced,
