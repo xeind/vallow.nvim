@@ -193,7 +193,10 @@ ACTIONS ~
 
   r         Re-run fallow (background; no loading flash while panel is open).
   P         Peek — open a floating preview of the file at the finding.
-            Move the cursor or press P again to close the float.
+            Findings that span a range — clone instances and complex
+            functions — get the whole start-to-end block highlighted, and
+            the float title reads "path:start-end". Move the cursor or
+            press P again to close the float.
   K         Detail float — show path, export name, kind, and suggested
             actions for the finding under the cursor. On a circular
             dependency it also draws the cycle as a chain, one line per

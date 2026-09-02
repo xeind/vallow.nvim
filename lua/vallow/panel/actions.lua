@@ -746,6 +746,9 @@ M.peek = function(buf)
   local fbuf = vim.fn.bufadd(path)
   vim.fn.bufload(fbuf)
 
+  -- Clone instances and complexity findings span a range, not one line.
+  local end_lnum = math.min(item.end_lnum or lnum, vim.api.nvim_buf_line_count(fbuf))
+
   local panel_win = require("vallow.panel").state.win
   local pw = panel_win and vim.api.nvim_win_is_valid(panel_win) and vim.api.nvim_win_get_width(panel_win) or 80
 
@@ -769,7 +772,7 @@ M.peek = function(buf)
     height = float_h,
     style = "minimal",
     border = "rounded",
-    title = " " .. (item.relative_path or path) .. ":" .. lnum .. " ",
+    title = " " .. (item.relative_path or path) .. ":" .. lnum .. (end_lnum > lnum and ("-" .. end_lnum) or "") .. " ",
     title_pos = "center",
   })
 
@@ -783,9 +786,9 @@ M.peek = function(buf)
     vim.cmd("normal! zz")
   end)
 
-  -- Highlight the issue line with a subtle Search mark
+  -- One line gets a Search mark; a range gets the whole block highlighted.
   local ns = vim.api.nvim_create_namespace("vallow_peek")
-  vim.api.nvim_buf_add_highlight(fbuf, ns, "CurSearch", lnum - 1, 0, -1)
+  M._peek_marks(fbuf, ns, lnum, end_lnum)
 
   local function close()
     pcall(vim.api.nvim_buf_clear_namespace, fbuf, ns, 0, -1)
@@ -820,6 +823,16 @@ M.peek = function(buf)
     once = true,
     callback = cleanup,
   })
+end
+
+M._peek_marks = function(fbuf, ns, lnum, end_lnum)
+  if end_lnum > lnum then
+    for l = lnum, end_lnum do
+      pcall(vim.api.nvim_buf_set_extmark, fbuf, ns, l - 1, 0, { line_hl_group = "Visual" })
+    end
+  else
+    vim.api.nvim_buf_add_highlight(fbuf, ns, "CurSearch", lnum - 1, 0, -1)
+  end
 end
 
 -- ── Detail float (K) ─────────────────────────────────────────────────

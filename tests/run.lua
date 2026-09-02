@@ -666,6 +666,67 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 17. Peek highlights the whole range of a clone instance or a function.
+table.insert(steps, function(next_step)
+  local fixture = vim.fn.getcwd()
+  local health_dir = repo .. "/tests/fixture-health"
+  vim.cmd("enew")
+  vim.cmd("cd " .. health_dir)
+  require("vallow").setup({})
+
+  require("vallow.runner").run(function(results)
+    local actions = require("vallow.panel.actions")
+    local render = require("vallow.panel.render")
+    local peek_ns = vim.api.nvim_create_namespace("vallow_peek")
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.b[buf].vallow_open_cats = { clone_groups = true, health_complexity = true }
+    render.render(buf, results, nil)
+    vim.api.nvim_win_set_buf(0, buf)
+
+    -- Find a row whose item spans more than one line, and a single-line row.
+    local ranged_line, plain_line, ranged
+    for lnum, entry in pairs(render.get_line_map(buf)) do
+      if type(entry) == "table" and not entry._type and entry.path and entry.path ~= "" then
+        if entry.end_lnum and entry.end_lnum > entry.lnum then
+          ranged_line, ranged = lnum, entry
+        elseif not entry.end_lnum then
+          plain_line = lnum
+        end
+      end
+    end
+    ok("peek: ranged row found", ranged ~= nil, "no row with an end line")
+
+    vim.api.nvim_win_set_cursor(0, { ranged_line, 0 })
+    actions.peek(buf)
+    local fbuf = vim.fn.bufnr(ranged.path)
+    local marks = vim.api.nvim_buf_get_extmarks(fbuf, peek_ns, 0, -1, { details = true })
+    eq("peek: one mark per line", #marks, ranged.end_lnum - ranged.lnum + 1)
+    eq("peek: range highlight", marks[1] and marks[1][4].line_hl_group, "Visual")
+    eq("peek: starts at the instance", marks[1] and marks[1][2] + 1, ranged.lnum)
+    vim.api.nvim_buf_clear_namespace(fbuf, peek_ns, 0, -1)
+
+    if plain_line then
+      local plain = render.get_line_map(buf)[plain_line]
+      vim.api.nvim_win_set_cursor(0, { plain_line, 0 })
+      actions.peek(buf)
+      local pbuf = vim.fn.bufnr(plain.path)
+      local pmarks = vim.api.nvim_buf_get_extmarks(pbuf, peek_ns, 0, -1, { details = true })
+      eq("peek: single line stays one mark", #pmarks, 1)
+      ok(
+        "peek: single line uses CurSearch",
+        pmarks[1] and pmarks[1][4].hl_group == "CurSearch",
+        vim.inspect(pmarks[1])
+      )
+      vim.api.nvim_buf_clear_namespace(pbuf, peek_ns, 0, -1)
+    end
+
+    render.clear(buf)
+    vim.cmd("cd " .. fixture)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

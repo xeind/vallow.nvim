@@ -112,7 +112,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `d` | Diff the two largest instances of a clone group |
 | `D` | Health dashboard float |
 | `gf` | Open picker (fuzzy search all findings) |
-| `P` | Peek at file in floating window |
+| `P` | Peek at file in floating window (whole range for clones and functions) |
 | `Q` | Send to quickfix |
 | `y` | Yank path:line |
 | `r` | Refresh |
