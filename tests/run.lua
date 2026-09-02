@@ -638,6 +638,34 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 16. Cycle chain in the K detail float.
+table.insert(steps, function(next_step)
+  local fixture = vim.fn.getcwd()
+  local health_dir = repo .. "/tests/fixture-health"
+  vim.cmd("enew")
+  vim.cmd("cd " .. health_dir)
+  require("vallow").setup({})
+
+  require("vallow.runner").run(function(results)
+    eq("cycle: found", count(results, "circular_deps"), 1)
+    local item = results.findings.circular_deps.items[1]
+    eq("cycle: two edges", #(item.edges or {}), 2)
+    ok("cycle: edge path absolute", (item.edges[1].path or ""):sub(1, 1) == "/", vim.inspect(item.edges[1]))
+
+    local lines = require("vallow.panel.actions")._detail_lines(item)
+    ok("cycle: heading", has_line(lines, "  Cycle"), vim.inspect(lines))
+    ok("cycle: first hop", has_line(lines, "src/a%.ts:%d+ → src/b%.ts"), vim.inspect(lines))
+    ok("cycle: closes the loop", has_line(lines, "src/b%.ts:%d+ → src/a%.ts"), vim.inspect(lines))
+    ok("cycle: suggestions kept", has_line(lines, "  Suggestions"), vim.inspect(lines))
+
+    local plain = require("vallow.panel.actions")._detail_lines({ relative_path = "src/a.ts", lnum = 3 })
+    ok("cycle: no chain without edges", not has_line(plain, "  Cycle"), vim.inspect(plain))
+
+    vim.cmd("cd " .. fixture)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

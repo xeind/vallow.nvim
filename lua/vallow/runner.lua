@@ -536,12 +536,24 @@ M._normalize = function(raw, root)
       lnum = entry.line or v.line or 1
       col = entry.col or v.col or 0
     end
+    -- edges[] carries the import line of each hop; K draws them as a chain.
+    local edges = {}
+    for _, e in ipairs(v.edges or {}) do
+      table.insert(edges, {
+        path = abs(e.path or ""),
+        relative_path = rel(abs(e.path or "")),
+        lnum = e.line or 1,
+        col = e.col or 0,
+      })
+    end
     table.insert(findings.circular_deps.items, {
       path = abs(raw_path),
       relative_path = rel(abs(raw_path)),
       lnum = lnum,
       col = col,
       cycle = cycle,
+      edges = edges,
+      actions = v.actions,
       introduced = v.introduced,
     })
   end

@@ -195,8 +195,10 @@ ACTIONS ~
   P         Peek — open a floating preview of the file at the finding.
             Move the cursor or press P again to close the float.
   K         Detail float — show path, export name, kind, and suggested
-            actions for the finding under the cursor. Press Esc/K/q or
-            move the cursor to close.
+            actions for the finding under the cursor. On a circular
+            dependency it also draws the cycle as a chain, one line per
+            hop, "a.ts:12 → b.ts", ending back at the first file. Press
+            Esc/K/q or move the cursor to close.
   ga        LSP code action — jump to the file and trigger
             vim.lsp.buf.code_action(). Requires fallow-lsp to be attached.
   Q         Send all visible findings to the quickfix list, then open it.

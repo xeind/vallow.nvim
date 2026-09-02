@@ -100,7 +100,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `<Tab>` / `za` | Toggle fold |
 | `zo` / `zc` | Open / close fold |
 | `zR` / `zM` | Open / close all folds |
-| `K` | Detail float: path, name, kind, fix suggestions |
+| `K` | Detail float: path, name, kind, fix suggestions, cycle chain |
 | `f` | Filter by path or name |
 | `F` | Clear filter |
 | `%` | Filter findings to the file under cursor |

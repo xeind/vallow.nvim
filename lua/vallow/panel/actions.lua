@@ -824,12 +824,8 @@ end
 
 -- ── Detail float (K) ─────────────────────────────────────────────────
 
-M.detail = function(buf)
-  local item = M._item_at_cursor(buf)
-  if not item or item._type then
-    return
-  end
-
+-- The static part of the K float: location, name, cycle chain, suggestions.
+M._detail_lines = function(item)
   local lines, hls = {}, {}
   local function push(text, hl)
     table.insert(lines, text)
@@ -856,6 +852,17 @@ M.detail = function(buf)
     push("  since: " .. tostring(item.introduced), "VallowKind")
   end
 
+  -- Circular dependencies: one line per hop, ending back at the first file.
+  if item.edges and #item.edges > 1 then
+    push("")
+    push("  Cycle", "VallowSection")
+    for i, edge in ipairs(item.edges) do
+      local next_edge = item.edges[i + 1] or item.edges[1]
+      local from = (edge.relative_path or edge.path or "?") .. ":" .. (edge.lnum or 1)
+      push("  " .. from .. " → " .. (next_edge.relative_path or next_edge.path or "?"), "VallowPath")
+    end
+  end
+
   if item.actions and #item.actions > 0 then
     push("")
     push("  Suggestions", "VallowSection")
@@ -866,6 +873,16 @@ M.detail = function(buf)
     end
   end
   push("")
+  return lines, hls
+end
+
+M.detail = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then
+    return
+  end
+
+  local lines, hls = M._detail_lines(item)
 
   local width = 0
   for _, l in ipairs(lines) do
