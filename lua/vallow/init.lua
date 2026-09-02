@@ -4,6 +4,19 @@ M.setup = function(opts)
   require("vallow.config").setup(opts)
   require("vallow.panel.highlights").setup()
 
+  -- Keep the package.json overlay up to date when a manifest is opened after
+  -- a run. Results live in the panel state, so this is cheap when empty.
+  vim.api.nvim_create_autocmd("BufEnter", {
+    pattern = "package.json",
+    group = vim.api.nvim_create_augroup("VallowManifest", { clear = true }),
+    callback = function(ev)
+      local results = require("vallow.panel").state.results
+      if results and results.findings then
+        require("vallow.manifest").apply_buf(ev.buf, results.findings)
+      end
+    end,
+  })
+
   -- Register the snacks picker source once snacks itself is loaded. Requiring
   -- it here would force-load a plugin the user may have set to load lazily.
   if package.loaded["snacks"] then

@@ -338,6 +338,10 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
       },
     },
 
+    -- End-of-line virtual text on the dependency lines of an open
+    -- package.json, see |vallow-integrations|. false turns it off.
+    manifest_overlay = true,
+
     -- Max findings shown per category before a "N more…" expand row.
     -- Press <CR> on that row to show all.
     max_items = 30,
@@ -411,6 +415,10 @@ UNUSED CODE ~
 
   Dependencies          Packages listed in dependencies / devDependencies /
                         optionalDependencies that no file imports.
+
+  Misplaced Deps        Production dependencies only imported with
+                        "import type", and dependencies only imported by
+                        test files. Both belong in devDependencies.
 
   Unlisted Deps         Packages your code imports but that are missing from
                         package.json. Jumps to package.json when no location
@@ -691,6 +699,24 @@ JavaScript/TypeScript project directory.
 
 ==============================================================================
 12. INTEGRATIONS                                      *vallow-integrations*
+
+PACKAGE.JSON OVERLAY ~
+
+When a package.json of the project is open, every dependency line gets
+virtual text at the end of the line:
+
+  unused              the package is in package.json but nothing imports it
+  unused (dev)        the same, in devDependencies
+  unused (optional)   the same, in optionalDependencies
+  type-only           only imported with "import type"
+  test-only           only imported by test files
+  dev dep in prod     a devDependency imported by production code
+
+Unlisted packages have no line of their own, so they are named together on
+the closing brace of the dependencies block: "unlisted: axios, react".
+
+The overlay is redrawn after every run and when a package.json is opened.
+Turn it off with manifest_overlay = false, see |vallow-config|.
 
 PICKERS ~
 

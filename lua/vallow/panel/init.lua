@@ -313,6 +313,7 @@ end
 -- decorations, and the User VallowResults event for third-party code.
 M._on_results = function(results)
   require("vallow.diagnostics").apply(results.findings)
+  require("vallow.manifest").apply(results.findings)
   require("vallow.integrations").refresh()
   vim.api.nvim_exec_autocmds("User", { pattern = "VallowResults", modeline = false })
 end

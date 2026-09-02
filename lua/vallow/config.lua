@@ -58,7 +58,15 @@ M.defaults = {
       severity = "hint",
       sources = { "unused_deps", "unused_dev_deps", "unused_optional_deps" },
     },
-    unlisted_deps = { icon = "󰌶", label = "Unlisted Deps", section = "unused_code", order = 6, severity = "warn" },
+    misplaced_deps = {
+      icon = "󰒓",
+      label = "Misplaced Deps",
+      section = "unused_code",
+      order = 6,
+      severity = "hint",
+      sources = { "type_only_deps", "test_only_deps" },
+    },
+    unlisted_deps = { icon = "󰌶", label = "Unlisted Deps", section = "unused_code", order = 7, severity = "warn" },
     -- ISSUES (actual bugs — error/warn severity)
     dev_dep_in_prod = {
       icon = "󰒓",
@@ -125,6 +133,9 @@ M.defaults = {
 
   -- Silently re-run fallow after saving a JS/TS file (background, no loading flash).
   auto_refresh = false,
+
+  -- End-of-line virtual text on the dependency lines of an open package.json.
+  manifest_overlay = true,
 
   -- Cache results per project root under stdpath("cache")/vallow.
   -- On open, cached results render at once marked (stale) while fallow re-runs.

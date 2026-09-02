@@ -437,6 +437,18 @@ M._normalize = function(raw, root)
   for _, v in ipairs(check.unused_optional_dependencies or {}) do
     push_dep(v, findings.unused_optional_deps)
   end
+  -- type_only_dependencies[] / test_only_dependencies[]: same shape as the
+  -- unused dependency buckets, but the package is in the wrong section of
+  -- package.json rather than unused.
+  for _, v in ipairs(check.type_only_dependencies or {}) do
+    push_dep(v, findings.type_only_deps)
+  end
+  for _, v in ipairs(check.test_only_dependencies or {}) do
+    push_dep(v, findings.test_only_deps)
+  end
+  findings.type_only_deps.count = #findings.type_only_deps.items
+  findings.test_only_deps.count = #findings.test_only_deps.items
+
   findings.unused_deps.count = #findings.unused_deps.items
   findings.unused_dev_deps.count = #findings.unused_dev_deps.items
   findings.unused_optional_deps.count = #findings.unused_optional_deps.items
@@ -717,6 +729,8 @@ M._normalize = function(raw, root)
     "unused_enum_members",
     "unused_class_members",
     "unused_files",
+    "type_only_deps",
+    "test_only_deps",
     "unresolved_imports",
     "unlisted_deps",
     "duplicate_exports",
@@ -873,6 +887,8 @@ M._empty_findings = function()
     unused_deps = { count = 0, items = {} },
     unused_dev_deps = { count = 0, items = {} },
     unused_optional_deps = { count = 0, items = {} },
+    type_only_deps = { count = 0, items = {} },
+    test_only_deps = { count = 0, items = {} },
     unresolved_imports = { count = 0, items = {} },
     unlisted_deps = { count = 0, items = {} },
     duplicate_exports = { count = 0, items = {} },

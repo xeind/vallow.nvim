@@ -125,7 +125,7 @@ Sections and categories shown only when they have findings.
 
 | Section | Categories |
 |---|---|
-| **UNUSED CODE** | Unused Exports, Types, Members, Files, Dependencies, Unlisted Deps |
+| **UNUSED CODE** | Unused Exports, Types, Members, Files, Dependencies, Misplaced Deps, Unlisted Deps |
 | **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports, Stale Suppressions |
 | **DUPLICATES** | Clone Groups |
 | **HEALTH** | Complexity, Hotspots, Refactoring Targets |
@@ -154,6 +154,7 @@ require("vallow").setup({
   },
 
   max_items = 30,  -- items per category before "N more..." expands
+  manifest_overlay = true,  -- virtual text per dependency line in package.json
   auto_refresh = false,  -- re-run fallow silently on every JS/TS file save
   cache = true,  -- reopen with the last run's results, marked (stale), while fallow re-runs
 
@@ -233,6 +234,14 @@ require("lualine").setup({
 Shows `vallow E:2 W:5 H:40`, coloured per severity with `VallowSevError`,
 `VallowSevWarn`, and `VallowSevHint`. A spinner runs while fallow does,
 `vallow ✓` means no findings, and `vallow !` means fallow failed.
+
+### package.json overlay
+
+Open a `package.json` inside the project and each dependency line gets virtual
+text at the end: `unused`, `unused (dev)`, `type-only`, `test-only`, or
+`dev dep in prod`. Packages your code imports but never listed are named on the
+closing brace of the `dependencies` block. Turn it off with
+`manifest_overlay = false`.
 
 ### Picker extensions
 

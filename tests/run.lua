@@ -938,6 +938,66 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 21. package.json overlay: one label per dependency line.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local panel = require("vallow.panel")
+  require("vallow.runner").run(function(results)
+    panel.state.results = results
+    local manifest = require("vallow.manifest")
+    local ns = vim.api.nvim_create_namespace("vallow_manifest")
+
+    vim.cmd("edit package.json")
+    local buf = vim.api.nvim_get_current_buf()
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+    local blocks = manifest._scan(lines)
+    eq("manifest: dependency line", blocks.dependencies.names["lodash"], 7)
+    eq("manifest: block closes", blocks.dependencies.close, 8)
+    eq("manifest: dev dependency line", blocks.devDependencies.names["typescript"], 10)
+
+    local function marks()
+      local out = {}
+      for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, { details = true })) do
+        local text = {}
+        for _, chunk in ipairs(m[4].virt_text) do
+          table.insert(text, chunk[1])
+        end
+        out[m[2] + 1] = { text = table.concat(text), hl = m[4].virt_text[1][2] }
+      end
+      return out
+    end
+
+    manifest.apply_buf(buf, results.findings)
+    local m = marks()
+    eq("manifest: unused dep", m[7] and m[7].text, "  unused")
+    eq("manifest: unused dep highlight", m[7] and m[7].hl, "VallowSevWarn")
+    eq("manifest: nothing on the name line", m[2], nil)
+
+    local findings = {
+      type_only_deps = { count = 1, items = { { name = "lodash", path = "" } } },
+      test_only_deps = { count = 1, items = { { name = "typescript", path = "" } } },
+      dev_dep_in_prod = { count = 1, items = { { name = "lodash", path = "" } } },
+      unlisted_deps = { count = 2, items = { { name = "react" }, { name = "axios" } } },
+    }
+    manifest.apply_buf(buf, findings)
+    m = marks()
+    ok("manifest: type-only", (m[7] and m[7].text or ""):find("type%-only") ~= nil, vim.inspect(m[7]))
+    ok("manifest: dev dep in prod", (m[7] and m[7].text or ""):find("dev dep in prod") ~= nil, vim.inspect(m[7]))
+    eq("manifest: test-only", m[10] and m[10].text, "  test-only")
+    eq("manifest: unlisted on closing brace", m[8] and m[8].text, "  unlisted: axios, react")
+    eq("manifest: unlisted highlight", m[8] and m[8].hl, "VallowSevWarn")
+
+    require("vallow").setup({ manifest_overlay = false })
+    manifest.apply_buf(buf, findings)
+    eq("manifest: overlay disabled", vim.tbl_count(marks()), 0)
+
+    require("vallow").setup({})
+    manifest.clear(buf)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
