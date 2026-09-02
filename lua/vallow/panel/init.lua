@@ -140,7 +140,22 @@ M.open = function()
     )
     M._bg_refresh()
   else
-    M.refresh()
+    -- Nothing in memory: show the cached results from the last session,
+    -- marked stale, while a fresh run proceeds.
+    local cached = require("vallow.cache").load(require("vallow.runner").find_root())
+    if cached then
+      M.state.results = cached
+      require("vallow.panel.render").render(M.state.buf, cached, M.state.win)
+      require("vallow.panel.tabs").set_winbar(
+        M.state.win,
+        M.state.current_section,
+        cached,
+        require("vallow.config").get()
+      )
+      M._bg_refresh()
+    else
+      M.refresh()
+    end
   end
 end
 

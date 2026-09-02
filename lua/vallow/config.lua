@@ -111,6 +111,10 @@ M.defaults = {
   -- Silently re-run fallow after saving a JS/TS file (background, no loading flash).
   auto_refresh = false,
 
+  -- Cache results per project root under stdpath("cache")/vallow.
+  -- On open, cached results render at once marked (stale) while fallow re-runs.
+  cache = true,
+
   -- Inline diagnostics in open buffers (like LSP hints)
   diagnostics = {
     enabled = true,

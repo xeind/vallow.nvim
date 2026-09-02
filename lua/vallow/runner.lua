@@ -44,6 +44,12 @@ end
 M.run = function(callback)
   _gen = _gen + 1
   local gen = _gen
+  -- Every successful run refreshes the on-disk cache read on the next open.
+  local user_callback = callback
+  callback = function(results)
+    require("vallow.cache").save(results)
+    user_callback(results)
+  end
   local cfg = require("vallow.config").get()
   local root = M.find_root()
   if not root then

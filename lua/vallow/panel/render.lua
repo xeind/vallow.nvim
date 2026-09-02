@@ -99,7 +99,11 @@ M.render = function(buf, results, win)
 
   -- ── Run info + notices ──────────────────────────────────────────────
   if results.version then
-    push(string.format("  fallow %s · %dms", results.version, results.duration_ms or 0), 2, -1, "VallowFooter")
+    local info = string.format("  fallow %s · %dms", results.version, results.duration_ms or 0)
+    if results.stale then
+      info = info .. " (stale)"
+    end
+    push(info, 2, -1, "VallowFooter")
   end
   for _, text in ipairs(results.notices or {}) do
     -- Panel has nowrap, so wrap long advisory messages by hand.

@@ -188,6 +188,11 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     -- false = disabled (default).
     auto_refresh = false,
 
+    -- Cache the last results per project root under
+    -- stdpath("cache")/vallow. On open, cached results render at once with
+    -- "(stale)" in the header line while a fresh run proceeds.
+    cache = true,
+
     -- Inline diagnostics pushed to open buffers.
     diagnostics = {
       enabled = true,

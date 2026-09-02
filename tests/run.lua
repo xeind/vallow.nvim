@@ -101,6 +101,32 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 4. Result cache: a run writes it, load returns it marked stale.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local cache = require("vallow.cache")
+  local runner = require("vallow.runner")
+  local path = cache.path(runner.find_root())
+  vim.fn.delete(path)
+  runner.run(function(results)
+    ok("cache: file written", vim.fn.filereadable(path) == 1, tostring(path))
+    local cached = cache.load(runner.find_root())
+    ok("cache: loads", cached ~= nil)
+    if cached then
+      eq("cache: unused_exports", count(cached, "unused_exports"), count(results, "unused_exports"))
+      eq("cache: stale", cached.stale, true)
+      ok("cache: stale in header", has_line(render_lines(cached), "%(stale%)"))
+    end
+    vim.fn.delete(path)
+
+    -- cache = false disables both ends.
+    require("vallow").setup({ cache = false })
+    cache.save(results)
+    ok("cache: disabled by config", vim.fn.filereadable(path) == 0)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
