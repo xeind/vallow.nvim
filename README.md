@@ -160,6 +160,7 @@ require("vallow").setup({
     enabled = true,
     virtual_text = true,  -- false hides the inline text, keeps signs and float
     current_buffer_only = false,  -- true limits diagnostics to the current buffer
+    virtual_lines = false,  -- dim "ƒ cyclomatic N · cognitive M" above complex functions
     -- Per finding category: turn it off, or change its severity
     -- ("error" | "warn" | "info" | "hint").
     categories = {

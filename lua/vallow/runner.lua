@@ -643,23 +643,27 @@ M._normalize = function(raw, root)
 
   -- health: complexity findings[], hotspots[], targets[]
   for _, v in ipairs(health_raw.findings or {}) do
+    local line = v.line or 1
+    local span = tonumber(v.line_count or v.lineCount)
     table.insert(findings.health_complexity.items, {
-      path = v.path or "",
-      relative_path = rel(v.path),
-      lnum = v.line or 1,
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
+      lnum = line,
+      end_lnum = span and (line + span - 1) or nil,
       name = v.name or "",
       cyclomatic = v.cyclomatic,
       cognitive = v.cognitive,
       exceeded = v.exceeded,
       introduced = v.introduced,
+      actions = v.actions,
     })
   end
   findings.health_complexity.count = #findings.health_complexity.items
 
   for _, v in ipairs(health_raw.hotspots or {}) do
     table.insert(findings.health_hotspots.items, {
-      path = v.path or "",
-      relative_path = rel(v.path),
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
       score = v.score,
       commits = v.commits,
       trend = v.trend,
@@ -671,8 +675,8 @@ M._normalize = function(raw, root)
 
   for _, v in ipairs(health_raw.targets or {}) do
     table.insert(findings.health_targets.items, {
-      path = v.path or "",
-      relative_path = rel(v.path),
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
       recommendation = v.recommendation,
       category = v.category,
       priority = v.priority,

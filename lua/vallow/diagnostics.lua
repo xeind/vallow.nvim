@@ -3,6 +3,9 @@
 local M = {}
 
 local ns = vim.api.nvim_create_namespace("vallow_diag")
+-- Complexity virtual lines and hotspot signs are extmarks, not diagnostics,
+-- so they live in their own namespace.
+local virt_ns = vim.api.nvim_create_namespace("vallow_virt")
 
 -- Returns true if the fallow LSP is attached to the buffer — in that case
 -- the LSP owns inline diagnostics and we skip ours to avoid duplicates.
@@ -71,6 +74,49 @@ local function apply_ns_opts(dcfg)
 end
 
 local LABEL = require("vallow.labels").label
+
+-- Draw the complexity virtual lines and hotspot signs for one buffer.
+-- Always clears first, so turning the option off removes them on the next run.
+M.apply_virt = function(bufnr, findings, dcfg)
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+  vim.api.nvim_buf_clear_namespace(bufnr, virt_ns, 0, -1)
+  if not dcfg.virtual_lines then
+    return
+  end
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  if not path or path == "" then
+    return
+  end
+  local last = vim.api.nvim_buf_line_count(bufnr)
+
+  local complexity = findings.health_complexity
+  for _, item in ipairs(complexity and complexity.items or {}) do
+    local lnum = math.max(1, item.lnum or 1)
+    if item.path == path and lnum <= last then
+      local text = ("ƒ cyclomatic %s · cognitive %s"):format(item.cyclomatic or "?", item.cognitive or "?")
+      -- Line up with the function's own indent.
+      local src = vim.api.nvim_buf_get_lines(bufnr, lnum - 1, lnum, false)[1] or ""
+      local indent = src:match("^%s*") or ""
+      pcall(vim.api.nvim_buf_set_extmark, bufnr, virt_ns, lnum - 1, 0, {
+        virt_lines = { { { indent .. text, "VallowKind" } } },
+        virt_lines_above = true,
+      })
+    end
+  end
+
+  -- Hotspots name a file, not a line; the sign goes on its first line.
+  local hotspots = findings.health_hotspots
+  for _, item in ipairs(hotspots and hotspots.items or {}) do
+    if item.path == path then
+      pcall(vim.api.nvim_buf_set_extmark, bufnr, virt_ns, 0, 0, {
+        sign_text = "󱐋",
+        sign_hl_group = "VallowKind",
+      })
+    end
+  end
+end
 
 -- Apply diagnostics for all open buffers that have findings
 M.apply = function(findings)
@@ -146,6 +192,12 @@ M.apply = function(findings)
       vim.diagnostic.set(ns, bufnr, diags, {})
     end
   end
+
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(bufnr) and (not only or bufnr == only) then
+      M.apply_virt(bufnr, findings, dcfg)
+    end
+  end
 end
 
 -- Clear all vallow diagnostics from all buffers
@@ -153,6 +205,7 @@ M.clear = function()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then
       vim.diagnostic.reset(ns, bufnr)
+      vim.api.nvim_buf_clear_namespace(bufnr, virt_ns, 0, -1)
     end
   end
 end
@@ -226,6 +279,7 @@ M.apply_buf = function(bufnr, findings)
   end
 
   vim.diagnostic.set(ns, bufnr, diags, {})
+  M.apply_virt(bufnr, findings, dcfg)
 end
 
 return M

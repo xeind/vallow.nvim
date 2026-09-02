@@ -518,6 +518,59 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 14. Virtual lines above complex functions and the hotspot gutter sign.
+table.insert(steps, function(next_step)
+  local fixture = vim.fn.getcwd()
+  local health_dir = repo .. "/tests/fixture-health"
+  vim.cmd("enew")
+  vim.cmd("cd " .. health_dir)
+  require("vallow").setup({ diagnostics = { virtual_lines = true } })
+
+  require("vallow.runner").run(function(results)
+    local diag = require("vallow.diagnostics")
+    local virt_ns = vim.api.nvim_create_namespace("vallow_virt")
+    vim.cmd("edit src/complex.ts")
+    local buf = vim.api.nvim_get_current_buf()
+    local findings = results.findings
+
+    eq("virt: complexity findings", count(results, "health_complexity"), 4)
+    local item = findings.health_complexity.items[1]
+    ok("virt: absolute path", (item.path or ""):sub(1, 1) == "/", tostring(item.path))
+    eq("virt: end line", findings.health_complexity.items[1].end_lnum ~= nil, true)
+
+    diag.apply_buf(buf, findings)
+    local marks = vim.api.nvim_buf_get_extmarks(buf, virt_ns, 0, -1, { details = true })
+    local text
+    for _, m in ipairs(marks) do
+      local vl = m[4] and m[4].virt_lines
+      if vl then
+        text = vl[1][1][1]
+        eq("virt: above the function", m[4].virt_lines_above, true)
+        eq("virt: highlight", vl[1][1][2], "VallowKind")
+      end
+    end
+    ok("virt: line text", text ~= nil and text:match("ƒ cyclomatic %d+ · cognitive %d+") ~= nil, vim.inspect(text))
+
+    -- Hotspots need git churn, which the fixture has none of; the sign path
+    -- is exercised with one synthetic entry on this file.
+    findings.health_hotspots = { count = 1, items = { { path = vim.api.nvim_buf_get_name(buf) } } }
+    diag.apply_buf(buf, findings)
+    local sign
+    for _, m in ipairs(vim.api.nvim_buf_get_extmarks(buf, virt_ns, 0, -1, { details = true })) do
+      sign = sign or (m[4] and m[4].sign_text)
+    end
+    ok("virt: hotspot sign", sign ~= nil and vim.trim(sign) == "󱐋", vim.inspect(sign))
+
+    require("vallow").setup({})
+    diag.apply_buf(buf, findings)
+    eq("virt: off by default", #vim.api.nvim_buf_get_extmarks(buf, virt_ns, 0, -1, {}), 0)
+
+    diag.clear()
+    vim.cmd("cd " .. fixture)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

@@ -300,6 +300,13 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
       -- every open buffer with findings.
       current_buffer_only = false,
 
+      -- true draws a dim line above every function with a complexity
+      -- finding, reading "ƒ cyclomatic N · cognitive M", and puts a
+      -- gutter sign on the first line of every hotspot file. Both are
+      -- extmarks, cleared and redrawn on each run. Skipped in buffers
+      -- the fallow LSP owns.
+      virtual_lines = false,
+
       -- Per finding category: turn it off, or change its severity.
       -- severity is "error" | "warn" | "info" | "hint".
       categories = {

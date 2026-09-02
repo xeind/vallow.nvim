@@ -126,6 +126,9 @@ M.defaults = {
   diagnostics = {
     enabled = true,
     virtual_text = true, -- false hides the inline text; signs and :lua vim.diagnostic.open_float() stay
+    -- true draws a dim line above every function with a complexity finding
+    -- ("ƒ cyclomatic N · cognitive M") and a gutter sign on hotspot files.
+    virtual_lines = false,
     current_buffer_only = false, -- true pushes diagnostics to the current buffer only
     -- Per finding category: turn it off, or change its severity
     -- ("error" | "warn" | "info" | "hint").
