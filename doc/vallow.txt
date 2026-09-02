@@ -74,6 +74,21 @@ subsequent opens results are shown instantly from cache.
 :Vallow
     Toggle the vallow panel open/closed.
 
+:Vallow {section}
+    Open the panel with one section tab active. {section} is a key of the
+    sections table: health, issues, duplicates, unused_code, architecture.
+
+:Vallow production
+    Toggle production mode (test and dev files excluded) and re-run.
+
+:Vallow refresh
+    Same as |:VallowRefresh|.
+
+:Vallow search
+    Same as |:VallowSearch|.
+
+    All arguments complete with <Tab>.
+
                                                            *:VallowRefresh*
 :VallowRefresh
     Force a fresh fallow run. Shows a loading state while running.

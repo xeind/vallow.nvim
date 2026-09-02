@@ -51,6 +51,10 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | Command | What it does |
 |---|---|
 | `:Vallow` | Toggle the panel |
+| `:Vallow health` | Open the panel on a section: `health`, `issues`, `duplicates`, `unused_code`, `architecture` |
+| `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
+| `:Vallow refresh` | Re-run fallow and refresh |
+| `:Vallow search` | Search findings |
 | `:VallowRefresh` | Re-run fallow and refresh |
 | `:VallowSearch` | Search findings with snacks / telescope / fzf-lua / vim.ui.select |
 

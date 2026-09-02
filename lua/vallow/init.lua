@@ -21,6 +21,23 @@ M.refresh = function()
   require("vallow.panel").refresh()
 end
 
+-- Open the panel with one section tab active, e.g. "health".
+M.open_section = function(section)
+  local panel = require("vallow.panel")
+  panel.state.current_section = section
+  panel.open()
+  -- open() only focuses an already-open panel, so re-render for the new tab.
+  if panel._is_open() and panel.state.results then
+    require("vallow.panel.render").render(panel.state.buf, panel.state.results, panel.state.win)
+    require("vallow.panel.tabs").set_winbar(
+      panel.state.win,
+      section,
+      panel.state.results,
+      require("vallow.config").get()
+    )
+  end
+end
+
 M.prefetch = function()
   require("vallow.panel").prefetch()
 end

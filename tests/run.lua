@@ -127,6 +127,49 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 5. :Vallow arguments and completion. -u NONE skips plugin files, so source
+-- the command definitions by hand.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  vim.cmd("source " .. repo .. "/plugin/vallow.lua")
+  local panel = require("vallow.panel")
+  local runner = require("vallow.runner")
+  runner.run(function(results)
+    panel.state.results = results
+    vim.cmd("Vallow health")
+    eq("command: section opened", panel.state.current_section, "health")
+    ok("command: panel is open", panel._is_open() == true)
+
+    local complete = vim.api.nvim_get_commands({})["Vallow"] ~= nil
+    ok("command: registered", complete)
+    local comp = vim.fn.getcompletion("Vallow ", "cmdline")
+    for _, want in ipairs({
+      "health",
+      "issues",
+      "duplicates",
+      "unused_code",
+      "architecture",
+      "production",
+      "refresh",
+      "search",
+    }) do
+      ok("complete: " .. want, vim.tbl_contains(comp, want), vim.inspect(comp))
+    end
+    ok("complete: prefix filter", vim.deep_equal(vim.fn.getcompletion("Vallow pro", "cmdline"), { "production" }))
+
+    panel.state.production = false
+    vim.cmd("Vallow production")
+    eq("command: production toggled", panel.state.production, true)
+    panel.state.production = false
+
+    vim.cmd("Vallow nonsense") -- unknown argument must not raise
+    ok("command: unknown argument survives", true)
+    panel.close()
+    panel.state.current_section = nil
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
