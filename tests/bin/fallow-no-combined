@@ -1,0 +1,7 @@
+#!/bin/sh
+# Test shim: prints nothing for a combined run so the runner falls back to
+# separate per-analysis runs. Subcommands go straight to the real fallow.
+case "$1" in
+  dead-code|dupes|health) exec fallow "$@" ;;
+  *) exit 0 ;;
+esac

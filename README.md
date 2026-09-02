@@ -197,6 +197,17 @@ export function keepThisPublic() {}
 ```
 
 
+## Development
+
+Tests run headless against a fixture project in `tests/fixture/`. They need
+`fallow` on PATH.
+
+```sh
+make test   # headless harness: runner, panel render, error path
+make lint   # stylua --check lua
+```
+
+
 ## License
 
 [MIT](LICENSE)
