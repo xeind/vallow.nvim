@@ -6,6 +6,8 @@ M.state = {
   results = nil,
   current_section = nil, -- nil = ALL tabs visible
   production = false, -- when true, fallow runs with --production
+  mode = nil, -- nil = normal run, "audit" = fallow audit --base
+  audit_ref = nil, -- base ref of the current audit
   -- Fold state persisted across panel closes (buffer variables are wiped with the buffer)
   fold_secs = {},
   fold_cats = {},
@@ -192,7 +194,7 @@ M.refresh = function()
   render.render(M.state.buf, { _loading = true }, M.state.win)
   require("vallow.panel.tabs").set_winbar(M.state.win, M.state.current_section, nil, require("vallow.config").get())
 
-  require("vallow.runner").run(function(results)
+  local function done(results)
     M.state.results = results
     if M._is_open() then
       render.render(M.state.buf, results, M.state.win)
@@ -205,13 +207,48 @@ M.refresh = function()
     end
     -- Push findings as inline diagnostics to open buffers
     require("vallow.diagnostics").apply(results.findings)
-  end)
+  end
+
+  if M.state.mode == "audit" then
+    require("vallow.runner").run_audit(M.state.audit_ref, done)
+  else
+    require("vallow.runner").run(done)
+  end
+end
+
+-- Run `fallow audit --base {ref}` and show it in the panel. Leave the mode
+-- with M.normal().
+M.audit = function(ref)
+  M.state.mode = "audit"
+  M.state.audit_ref = (ref and ref ~= "") and ref or nil
+  if M._is_open() then
+    M.refresh()
+  else
+    M.open()
+    M.refresh()
+  end
+end
+
+-- Back to a plain run.
+M.normal = function()
+  if M.state.mode == nil then
+    return
+  end
+  M.state.mode = nil
+  M.state.audit_ref = nil
+  if M._is_open() then
+    M.refresh()
+  end
 end
 
 -- Silent background run — updates results and re-renders if panel is open.
 -- Used when opening with cached results (stale-while-revalidate), and by the
 -- debounced auto-refresh path. Re-entrant: cancels any running timer.
 M._bg_refresh = function()
+  -- Audit results are explicit; never overwrite them with a plain run.
+  if M.state.mode == "audit" then
+    return
+  end
   -- Cancel pending debounce timer if called directly (e.g. stale-while-revalidate on open)
   if _refresh_timer then
     _refresh_timer:stop()

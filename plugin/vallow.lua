@@ -19,7 +19,7 @@ local function search()
 end
 
 -- :Vallow arguments: the section keys from config, plus these verbs.
-local verbs = { "production", "refresh", "search" }
+local verbs = { "audit", "production", "refresh", "search" }
 
 local function candidates()
   local list = vim.deepcopy(verbs)
@@ -32,8 +32,17 @@ end
 
 vim.api.nvim_create_user_command("Vallow", function(opts)
   local arg = vim.trim(opts.args or "")
+  local verb, rest = arg:match("^(%S+)%s*(.*)$")
   if arg == "" then
-    require("vallow").toggle()
+    -- Plain :Vallow leaves audit mode and shows the normal run.
+    local panel = require("vallow.panel")
+    if panel.state.mode == "audit" then
+      panel.normal()
+    else
+      require("vallow").toggle()
+    end
+  elseif verb == "audit" then
+    require("vallow.panel").audit(rest)
   elseif arg == "refresh" then
     require("vallow").refresh()
   elseif arg == "search" then
@@ -46,7 +55,7 @@ vim.api.nvim_create_user_command("Vallow", function(opts)
     vim.notify("vallow: unknown argument '" .. arg .. "'", vim.log.levels.WARN)
   end
 end, {
-  nargs = "?",
+  nargs = "*",
   complete = function(lead)
     return vim.tbl_filter(function(c)
       return c:find(lead, 1, true) == 1

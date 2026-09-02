@@ -72,6 +72,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 |---|---|
 | `:Vallow` | Toggle the panel |
 | `:Vallow health` | Open the panel on a section: `health`, `issues`, `duplicates`, `unused_code`, `architecture` |
+| `:Vallow audit [ref]` | Review the files changed since `ref` (default `main`, else `master`) |
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
 | `:Vallow refresh` | Re-run fallow and refresh |
 | `:Vallow search` | Search findings |
@@ -101,6 +102,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `f` | Filter by path or name |
 | `F` | Clear filter |
 | `%` | Filter findings to the file under cursor |
+| `i` | Audit mode: hide findings the change inherited |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
 | `Q` | Send to quickfix |

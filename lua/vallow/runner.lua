@@ -408,6 +408,7 @@ M._normalize = function(raw, root)
     table.insert(findings.unused_files.items, {
       path = v.path or "",
       relative_path = rel(v.path),
+      introduced = v.introduced,
     })
   end
   findings.unused_files.count = #findings.unused_files.items
@@ -420,6 +421,7 @@ M._normalize = function(raw, root)
       relative_path = rel(item.path),
       lnum = item.line or 1,
       used_in_workspaces = item.used_in_workspaces,
+      introduced = item.introduced,
     })
   end
   for _, v in ipairs(check.unused_dependencies or {}) do
@@ -443,6 +445,7 @@ M._normalize = function(raw, root)
       relative_path = rel(v.path),
       lnum = v.line or 1,
       actions = v.actions,
+      introduced = v.introduced,
     })
   end
   -- Unlisted deps: fallow may not include a file path (package-level finding).
@@ -459,6 +462,7 @@ M._normalize = function(raw, root)
       relative_path = rel(p),
       lnum = v.line or 1,
       actions = v.actions,
+      introduced = v.introduced,
     })
   end
   findings.unresolved_imports.count = #findings.unresolved_imports.items
@@ -503,6 +507,7 @@ M._normalize = function(raw, root)
       locations = locs,
       path = first.path or "",
       lnum = first.lnum or 1,
+      introduced = v.introduced,
     })
   end
   findings.duplicate_exports.count = #findings.duplicate_exports.items
@@ -533,6 +538,7 @@ M._normalize = function(raw, root)
       lnum = lnum,
       col = col,
       cycle = cycle,
+      introduced = v.introduced,
     })
   end
   findings.circular_deps.count = #findings.circular_deps.items
@@ -547,6 +553,7 @@ M._normalize = function(raw, root)
       import_path = v.import_path or v.importPath or "",
       boundary_name = v.boundary_name or v.boundaryName or "",
       actions = v.actions,
+      introduced = v.introduced,
     })
   end
   findings.boundary_violations.count = #findings.boundary_violations.items
@@ -560,6 +567,7 @@ M._normalize = function(raw, root)
       lnum = v.line or v.lnum or 1,
       col = v.col or 0,
       actions = v.actions,
+      introduced = v.introduced,
     })
   end
   findings.dev_dep_in_prod.count = #findings.dev_dep_in_prod.items
@@ -574,6 +582,7 @@ M._normalize = function(raw, root)
       name = item.property or item.token or item.rule or "",
       kind = item.raw_value or item.value or item.expected_token or "",
       actions = item.actions,
+      introduced = item.introduced,
     })
   end
   for _, v in ipairs(check.css_token_drift or {}) do
@@ -609,6 +618,7 @@ M._normalize = function(raw, root)
       tokens = g.tokens,
       lines = g.lines or g.line_count or g.lineCount or g.num_lines,
       severity = g.severity, -- "mild" | "moderate" | "severe"
+      introduced = g.introduced,
     })
   end
   findings.clone_groups.count = #findings.clone_groups.items
@@ -623,6 +633,7 @@ M._normalize = function(raw, root)
       cyclomatic = v.cyclomatic,
       cognitive = v.cognitive,
       exceeded = v.exceeded,
+      introduced = v.introduced,
     })
   end
   findings.health_complexity.count = #findings.health_complexity.items
@@ -713,6 +724,80 @@ M._normalize = function(raw, root)
     notices = notices,
     error = nil,
   }
+end
+
+-- Base ref for `:Vallow audit` when the user names none.
+M.default_base = function(root)
+  local out = vim.fn.systemlist({ "git", "-C", root, "rev-parse", "--verify", "--quiet", "main" })
+  if vim.v.shell_error == 0 and out[1] then
+    return "main"
+  end
+  return "master"
+end
+
+-- `fallow audit --base <ref>`: dead code, complexity, duplication and styling
+-- scoped to the files changed since <ref>.
+M.run_audit = function(ref, callback)
+  _gen = _gen + 1
+  local gen = _gen
+  local cfg = require("vallow.config").get()
+  local root = M.find_root()
+  if not root then
+    callback({ findings = M._empty_findings() })
+    return
+  end
+  local bin = M.resolve_cmd(root)
+  if not bin then
+    callback({ error = require("vallow.install").instructions(), findings = M._empty_findings() })
+    return
+  end
+  local base = (ref and ref ~= "") and ref or M.default_base(root)
+  local cmd = { bin, "audit", "--base", base, "--format", "json", "--quiet" }
+  for _, a in ipairs(cfg.fallow_args or {}) do
+    table.insert(cmd, a)
+  end
+
+  M._job(cmd, root, function(ok, data)
+    vim.schedule(function()
+      if gen ~= _gen then
+        return
+      end
+      if not ok then
+        callback({
+          error = tostring(data),
+          findings = M._empty_findings(),
+          audit = { base_ref = base },
+        })
+        return
+      end
+      callback(M._normalize_audit(data, root, base))
+    end)
+  end)
+end
+
+-- The audit envelope carries the same sub-analyses as combined mode, except
+-- that health findings sit under `complexity`.
+M._normalize_audit = function(raw, root, base)
+  local result = M._normalize({
+    kind = "combined",
+    version = raw.version,
+    elapsed_ms = raw.elapsed_ms,
+    dead_code = raw.dead_code,
+    duplication = raw.duplication,
+    health = raw.complexity,
+  }, root)
+  result.duration_ms = raw.elapsed_ms or result.duration_ms
+  local attr = raw.attribution or {}
+  result.audit = {
+    base_ref = raw.base_ref or base,
+    verdict = raw.verdict,
+    changed_files = raw.changed_files_count,
+    introduced = (attr.dead_code_introduced or 0)
+      + (attr.complexity_introduced or 0)
+      + (attr.duplication_introduced or 0)
+      + (attr.styling_introduced or 0),
+  }
+  return result
 end
 
 M._merge_separate = function(raw, root)

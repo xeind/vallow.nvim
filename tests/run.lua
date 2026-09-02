@@ -238,6 +238,63 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 8. Audit mode against a throwaway git repo: base ref, introduced marker,
+-- inherited toggle.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local runner = require("vallow.runner")
+  local fixture = vim.fn.getcwd()
+  local tmp = vim.fn.tempname()
+  vim.fn.mkdir(tmp, "p")
+  vim.fn.system({ "cp", "-r", fixture .. "/package.json", fixture .. "/tsconfig.json", fixture .. "/src", tmp })
+  local function git(...)
+    vim.fn.system({ "git", "-C", tmp, "-c", "user.email=t@t", "-c", "user.name=t", ... })
+  end
+  git("init", "-q")
+  git("add", "-A")
+  git("commit", "-qm", "init")
+  vim.fn.writefile({ "export function brandNew() {", "  return 1;", "}" }, tmp .. "/src/b.ts")
+  git("add", "-A")
+  git("commit", "-qm", "second")
+
+  vim.cmd("enew")
+  vim.cmd("cd " .. tmp)
+  git("branch", "-M", "master")
+  eq("audit: default base falls back to master", runner.default_base(tmp), "master")
+  git("branch", "-M", "main")
+  eq("audit: default base prefers main", runner.default_base(tmp), "main")
+
+  runner.run_audit("HEAD~1", function(results)
+    ok("audit: no error", not results.error, tostring(results.error))
+    ok("audit: envelope", results.audit ~= nil)
+    eq("audit: base ref", results.audit and results.audit.base_ref, "HEAD~1")
+    eq("audit: unused files", count(results, "unused_files"), 1)
+    local item = results.findings.unused_files.items[1]
+    eq("audit: introduced flag", item and item.introduced, true)
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    local render = require("vallow.panel.render")
+    vim.b[buf].vallow_open_cats = { unused_files = true, unused_all_deps = true }
+    render.render(buf, results, nil)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    ok("audit: header names the ref", has_line(lines, "audit vs HEAD~1"), vim.inspect(lines))
+    ok("audit: introduced marker", has_line(lines, "^    %+ .*b%.ts"), vim.inspect(lines))
+
+    -- `i` hides inherited findings; the unused dependency is inherited.
+    vim.b[buf].vallow_hide_inherited = true
+    render.render(buf, results, nil)
+    local narrowed = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    ok("audit: new-only header", has_line(narrowed, "new only %(i%)"), vim.inspect(narrowed))
+    ok("audit: inherited hidden", not has_line(narrowed, "lodash"), vim.inspect(narrowed))
+    render.clear(buf)
+    vim.api.nvim_buf_delete(buf, { force = true })
+
+    vim.cmd("cd " .. fixture)
+    vim.fn.delete(tmp, "rf")
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

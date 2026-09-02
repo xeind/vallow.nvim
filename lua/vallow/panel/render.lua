@@ -105,6 +105,20 @@ M.render = function(buf, results, win)
     end
     push(info, 2, -1, "VallowFooter")
   end
+  if results.audit then
+    local a = results.audit
+    local info = "  audit vs " .. (a.base_ref or "?")
+    if a.verdict then
+      info = info .. " · " .. a.verdict
+    end
+    if a.changed_files then
+      info = info .. " · " .. a.changed_files .. " changed file" .. (a.changed_files == 1 and "" or "s")
+    end
+    if vim.b[buf].vallow_hide_inherited then
+      info = info .. " · new only (i)"
+    end
+    push(info, 2, -1, "VallowSection")
+  end
   for _, text in ipairs(results.notices or {}) do
     -- Panel has nowrap, so wrap long advisory messages by hand.
     local first = true
@@ -116,7 +130,13 @@ M.render = function(buf, results, win)
 
   -- ── Active filter ───────────────────────────────────────────────────
   local filter_query = (vim.b[buf].vallow_filter or ""):lower()
+  -- Audit mode only: `i` hides findings the changeset inherited.
+  local hide_inherited = results.audit ~= nil and vim.b[buf].vallow_hide_inherited == true
+  local narrowed = filter_query ~= "" or hide_inherited
   local function matches(item)
+    if hide_inherited and item.introduced ~= true then
+      return false
+    end
     if filter_query == "" then
       return true
     end
@@ -159,8 +179,8 @@ M.render = function(buf, results, win)
       for _, cat in ipairs(sec.cats) do
         local d = M._resolve_findings(cat.key, cat.cfg, results.findings)
         if d then
-          if filter_query ~= "" then
-            if cat_matches(cat.key, cat.cfg) then
+          if narrowed then
+            if cat_matches(cat.key, cat.cfg) and not hide_inherited then
               sec_total = sec_total + (d.count or 0)
             else
               sec_total = sec_total + #vim.tbl_filter(matches, d.items)
@@ -213,8 +233,8 @@ M.render = function(buf, results, win)
             if d and d.count > 0 then
               -- Apply filter to items (skip if the filter matched the category itself)
               local items = d.items
-              local cat_filter_hit = cat_matches(cat.key, cat.cfg)
-              if filter_query ~= "" and not cat_filter_hit then
+              local cat_filter_hit = cat_matches(cat.key, cat.cfg) and not hide_inherited
+              if narrowed and not cat_filter_hit then
                 items = vim.tbl_filter(matches, items)
               end
 
@@ -224,7 +244,7 @@ M.render = function(buf, results, win)
                 local sev_hl = hls.sev_hl[cat.cfg.severity] or "VallowHeader"
 
                 -- Show filtered count vs total when filter active (not for category-level matches)
-                local cat_cnt = (filter_query ~= "" and not cat_filter_hit and #items < d.count)
+                local cat_cnt = (narrowed and not cat_filter_hit and #items < d.count)
                     and (tostring(#items) .. "/" .. tostring(d.count))
                   or tostring(d.count)
                 local cat_lbl = string.format("    %s %s %s", cat_fold, cat.cfg.icon, cat.cfg.label)
@@ -250,6 +270,16 @@ M.render = function(buf, results, win)
             end
           end
         end
+      end
+    end
+  end
+
+  -- Audit mode: mark rows the changeset introduced with a + in the gutter.
+  if results.audit then
+    for lnum, item in pairs(line_map) do
+      if type(item) == "table" and item.introduced == true and (lines[lnum] or ""):sub(1, 6) == "      " then
+        lines[lnum] = "    + " .. lines[lnum]:sub(7)
+        table.insert(hl_queue, { lnum - 1, 4, 5, "VallowSevWarn" })
       end
     end
   end

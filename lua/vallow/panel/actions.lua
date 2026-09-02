@@ -134,6 +134,21 @@ M.setup = function(buf)
   map("?", function()
     require("vallow.panel.help").open()
   end)
+  map("i", function()
+    M.toggle_inherited(buf)
+  end)
+end
+
+-- Audit mode: show every finding in the changed files, or only the ones the
+-- changeset introduced.
+M.toggle_inherited = function(buf)
+  local panel = require("vallow.panel")
+  if not (panel.state.results and panel.state.results.audit) then
+    vim.notify("vallow: not in audit mode — run :Vallow audit", vim.log.levels.INFO)
+    return
+  end
+  vim.b[buf].vallow_hide_inherited = not vim.b[buf].vallow_hide_inherited
+  require("vallow.panel.render").render(buf, panel.state.results, panel.state.win)
 end
 
 -- ── Jump ─────────────────────────────────────────────────────────────
