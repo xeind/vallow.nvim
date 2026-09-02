@@ -48,7 +48,7 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
 - **Trace.** `gt` on an unused export or dependency runs `--trace` /
   `--trace-dependency` and renders the evidence as an indented tree.
 
-## Batch 3 — views
+## Batch 3 — done
 
 - **Health dashboard.** `D` in the panel or `:Vallow dashboard`: centered
   float with a block-character score gauge, `health_score.penalties`
