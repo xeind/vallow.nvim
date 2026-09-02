@@ -24,7 +24,7 @@ M.find_root = function()
     for _, marker in ipairs(workspace_markers) do
       local found = vim.fn.findfile(marker, dir .. ";")
       if found ~= "" then
-        return vim.fn.fnamemodify(found, ":h")
+        return vim.fn.fnamemodify(found, ":p:h")
       end
     end
   end
@@ -33,7 +33,7 @@ M.find_root = function()
     for _, marker in ipairs(project_markers) do
       local found = vim.fn.findfile(marker, dir .. ";")
       if found ~= "" then
-        return vim.fn.fnamemodify(found, ":h")
+        return vim.fn.fnamemodify(found, ":p:h")
       end
     end
   end
@@ -158,18 +158,30 @@ M._run_separate = function(gen, root, cfg, callback)
   for _, a in ipairs(analyses) do
     if a == "dead-code" then
       local cmd = { cfg.fallow_cmd, "dead-code", "--format", "json", "--quiet" }
-      if production then table.insert(cmd, "--production") end
-      for _, arg in ipairs(extra) do table.insert(cmd, arg) end
+      if production then
+        table.insert(cmd, "--production")
+      end
+      for _, arg in ipairs(extra) do
+        table.insert(cmd, arg)
+      end
       jobs[#jobs + 1] = { key = "dead_code", cmd = cmd }
     elseif a == "dupes" then
       local cmd = { cfg.fallow_cmd, "dupes", "--format", "json", "--quiet" }
-      if production then table.insert(cmd, "--production") end
-      for _, arg in ipairs(extra) do table.insert(cmd, arg) end
+      if production then
+        table.insert(cmd, "--production")
+      end
+      for _, arg in ipairs(extra) do
+        table.insert(cmd, arg)
+      end
       jobs[#jobs + 1] = { key = "dupes", cmd = cmd }
     elseif a == "health" then
       local cmd = { cfg.fallow_cmd, "health", "--format", "json", "--quiet", "--score", "--hotspots", "--targets" }
-      if production then table.insert(cmd, "--production") end
-      for _, arg in ipairs(extra) do table.insert(cmd, arg) end
+      if production then
+        table.insert(cmd, "--production")
+      end
+      for _, arg in ipairs(extra) do
+        table.insert(cmd, arg)
+      end
       jobs[#jobs + 1] = { key = "health", cmd = cmd }
     end
   end
