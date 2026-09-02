@@ -9,7 +9,7 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
 - Show fallow version, elapsed time, workspace and type-aware notices.
 - `timeout_ms` and `env` config.
 
-## Batch 1 — plumbing
+## Batch 1 — done
 
 - **Tests and CI.** `tests/` with a fixture JS/TS project and a headless
   harness (`nvim --headless -l`) that runs the runner in combined and
