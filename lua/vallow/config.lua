@@ -118,6 +118,27 @@ M.defaults = {
   -- Inline diagnostics in open buffers (like LSP hints)
   diagnostics = {
     enabled = true,
+    virtual_text = true, -- false hides the inline text; signs and :lua vim.diagnostic.open_float() stay
+    current_buffer_only = false, -- true pushes diagnostics to the current buffer only
+    -- Per finding category: turn it off, or change its severity
+    -- ("error" | "warn" | "info" | "hint").
+    categories = {
+      unused_exports = { enabled = true, severity = "hint" },
+      unused_types = { enabled = true, severity = "hint" },
+      unused_enum_members = { enabled = true, severity = "hint" },
+      unused_class_members = { enabled = true, severity = "hint" },
+      unused_deps = { enabled = true, severity = "warn" },
+      unused_dev_deps = { enabled = true, severity = "hint" },
+      unused_optional_deps = { enabled = true, severity = "hint" },
+      unresolved_imports = { enabled = true, severity = "error" },
+      unlisted_deps = { enabled = true, severity = "warn" },
+      duplicate_exports = { enabled = true, severity = "warn" },
+      circular_deps = { enabled = true, severity = "warn" },
+      health_complexity = { enabled = true, severity = "warn" },
+      dev_dep_in_prod = { enabled = true, severity = "error" },
+      css_token_drift = { enabled = true, severity = "warn" },
+      raw_style_value = { enabled = true, severity = "hint" },
+    },
   },
 
   keymaps = {

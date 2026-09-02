@@ -47,6 +47,29 @@ local SEVERITY = {
   raw_style_value = vim.diagnostic.severity.HINT,
 }
 
+local SEVERITY_BY_NAME = {
+  error = vim.diagnostic.severity.ERROR,
+  warn = vim.diagnostic.severity.WARN,
+  info = vim.diagnostic.severity.INFO,
+  hint = vim.diagnostic.severity.HINT,
+}
+
+-- Severity for a category after config.diagnostics.categories overrides.
+-- Returns nil when the category is turned off.
+local function severity_for(cat_key, dcfg)
+  local cat = (dcfg.categories or {})[cat_key]
+  if cat and cat.enabled == false then
+    return nil
+  end
+  local name = cat and cat.severity
+  return (name and SEVERITY_BY_NAME[tostring(name):lower()]) or SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+end
+
+-- Virtual text is a namespace option, so it applies to our diagnostics only.
+local function apply_ns_opts(dcfg)
+  vim.diagnostic.config({ virtual_text = dcfg.virtual_text ~= false }, ns)
+end
+
 local LABEL = require("vallow.labels").label
 
 -- Apply diagnostics for all open buffers that have findings
@@ -58,6 +81,8 @@ M.apply = function(findings)
   if not cfg.diagnostics or not cfg.diagnostics.enabled then
     return
   end
+  local dcfg = cfg.diagnostics
+  apply_ns_opts(dcfg)
 
   -- Clear stale diagnostics from all loaded buffers before reapplying
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
@@ -88,8 +113,8 @@ M.apply = function(findings)
   -- Per-line finding categories (have path + line)
   for _, cat_key in ipairs(LINE_CATS) do
     local bucket = findings[cat_key]
-    if bucket and bucket.count > 0 then
-      local sev = SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+    local sev = severity_for(cat_key, dcfg)
+    if bucket and bucket.count > 0 and sev then
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
         local msg = (item.name and item.name ~= "") and (lbl .. ": " .. item.name) or lbl
@@ -101,8 +126,8 @@ M.apply = function(findings)
   -- unused_deps: show on package.json line
   for _, cat_key in ipairs({ "unused_deps", "unused_dev_deps", "unused_optional_deps" }) do
     local bucket = findings[cat_key]
-    if bucket and bucket.count > 0 then
-      local sev = SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+    local sev = severity_for(cat_key, dcfg)
+    if bucket and bucket.count > 0 and sev then
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
         add(item.path, item.lnum, 0, lbl .. ": " .. (item.name or ""), sev)
@@ -111,8 +136,12 @@ M.apply = function(findings)
   end
 
   -- Now push to open buffers (skip any where the fallow LSP is active)
+  local only = dcfg.current_buffer_only and vim.api.nvim_get_current_buf() or nil
   for path, diags in pairs(diags_by_path) do
     local bufnr = vim.fn.bufnr(path)
+    if only and bufnr ~= only then
+      bufnr = -1
+    end
     if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) and not lsp_active(bufnr) then
       vim.diagnostic.set(ns, bufnr, diags, {})
     end
@@ -138,8 +167,13 @@ M.apply_buf = function(bufnr, findings)
   if not cfg.diagnostics or not cfg.diagnostics.enabled then
     return
   end
+  local dcfg = cfg.diagnostics
+  apply_ns_opts(dcfg)
 
   if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+  if dcfg.current_buffer_only and bufnr ~= vim.api.nvim_get_current_buf() then
     return
   end
   if lsp_active(bufnr) then
@@ -154,8 +188,8 @@ M.apply_buf = function(bufnr, findings)
 
   for _, cat_key in ipairs(LINE_CATS) do
     local bucket = findings[cat_key]
-    if bucket and bucket.count > 0 then
-      local sev = SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+    local sev = severity_for(cat_key, dcfg)
+    if bucket and bucket.count > 0 and sev then
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
         if item.path == path then
@@ -174,8 +208,8 @@ M.apply_buf = function(bufnr, findings)
 
   for _, cat_key in ipairs({ "unused_deps", "unused_dev_deps", "unused_optional_deps" }) do
     local bucket = findings[cat_key]
-    if bucket and bucket.count > 0 then
-      local sev = SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+    local sev = severity_for(cat_key, dcfg)
+    if bucket and bucket.count > 0 and sev then
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
         if item.path == path then

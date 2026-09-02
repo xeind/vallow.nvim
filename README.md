@@ -127,6 +127,15 @@ require("vallow").setup({
 
   diagnostics = {
     enabled = true,
+    virtual_text = true,  -- false hides the inline text, keeps signs and float
+    current_buffer_only = false,  -- true limits diagnostics to the current buffer
+    -- Per finding category: turn it off, or change its severity
+    -- ("error" | "warn" | "info" | "hint").
+    categories = {
+      unused_exports     = { enabled = true, severity = "hint" },
+      unresolved_imports = { enabled = true, severity = "error" },
+      -- ... one entry per category, see :help vallow-config
+    },
   },
 
   statusline = {

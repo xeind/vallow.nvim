@@ -211,6 +211,34 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     -- Inline diagnostics pushed to open buffers.
     diagnostics = {
       enabled = true,
+
+      -- false hides the inline text for vallow diagnostics only. Signs and
+      -- vim.diagnostic.open_float() still work.
+      virtual_text = true,
+
+      -- true pushes diagnostics to the current buffer only, instead of
+      -- every open buffer with findings.
+      current_buffer_only = false,
+
+      -- Per finding category: turn it off, or change its severity.
+      -- severity is "error" | "warn" | "info" | "hint".
+      categories = {
+        unused_exports       = { enabled = true, severity = "hint" },
+        unused_types         = { enabled = true, severity = "hint" },
+        unused_enum_members  = { enabled = true, severity = "hint" },
+        unused_class_members = { enabled = true, severity = "hint" },
+        unused_deps          = { enabled = true, severity = "warn" },
+        unused_dev_deps      = { enabled = true, severity = "hint" },
+        unused_optional_deps = { enabled = true, severity = "hint" },
+        unresolved_imports   = { enabled = true, severity = "error" },
+        unlisted_deps        = { enabled = true, severity = "warn" },
+        duplicate_exports    = { enabled = true, severity = "warn" },
+        circular_deps        = { enabled = true, severity = "warn" },
+        health_complexity    = { enabled = true, severity = "warn" },
+        dev_dep_in_prod      = { enabled = true, severity = "error" },
+        css_token_drift      = { enabled = true, severity = "warn" },
+        raw_style_value      = { enabled = true, severity = "hint" },
+      },
     },
 
     -- Max findings shown per category before a "N more…" expand row.

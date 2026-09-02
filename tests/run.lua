@@ -170,6 +170,52 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 6. Per-category diagnostics config.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  require("vallow.runner").run(function(results)
+    local diag = require("vallow.diagnostics")
+    local ns = vim.api.nvim_create_namespace("vallow_diag")
+    local function fallow_diags(buf)
+      return vim.diagnostic.get(buf, { namespace = ns })
+    end
+
+    vim.cmd("edit src/a.ts")
+    local a_buf = vim.api.nvim_get_current_buf()
+    diag.apply(results.findings)
+    local d = fallow_diags(a_buf)
+    eq("diag: default count", #d, 2)
+    ok("diag: default severity", d[1].severity == vim.diagnostic.severity.HINT, vim.inspect(d[1]))
+
+    require("vallow").setup({ diagnostics = { categories = { unused_exports = { severity = "error" } } } })
+    diag.apply(results.findings)
+    local sevs = {}
+    for _, x in ipairs(fallow_diags(a_buf)) do
+      sevs[x.severity] = true
+    end
+    ok("diag: severity override", sevs[vim.diagnostic.severity.ERROR] == true, vim.inspect(sevs))
+
+    require("vallow").setup({ diagnostics = { categories = { unused_exports = { enabled = false } } } })
+    diag.apply(results.findings)
+    eq("diag: category disabled", #fallow_diags(a_buf), 1)
+
+    require("vallow").setup({ diagnostics = { virtual_text = false } })
+    diag.apply(results.findings)
+    eq("diag: virtual_text off", vim.diagnostic.config(nil, ns).virtual_text, false)
+
+    require("vallow").setup({ diagnostics = { current_buffer_only = true } })
+    vim.cmd("edit src/index.ts")
+    local i_buf = vim.api.nvim_get_current_buf()
+    diag.apply(results.findings)
+    eq("diag: current buffer only, other buffer", #fallow_diags(a_buf), 0)
+    ok("diag: current buffer only, this buffer", #fallow_diags(i_buf) > 0)
+
+    diag.clear()
+    require("vallow").setup({})
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
