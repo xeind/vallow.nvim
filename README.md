@@ -105,6 +105,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `%` | Filter findings to the file under cursor |
 | `i` | Audit mode: hide findings the change inherited |
 | `gi` | Inspect the file on this row |
+| `x` | Ignore this finding: `.fallowrc.json` entry or suppression comment |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
 | `Q` | Send to quickfix |
@@ -120,7 +121,7 @@ Sections and categories shown only when they have findings.
 | Section | Categories |
 |---|---|
 | **UNUSED CODE** | Unused Exports, Types, Members, Files, Dependencies, Unlisted Deps |
-| **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports |
+| **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports, Stale Suppressions |
 | **DUPLICATES** | Clone Groups |
 | **HEALTH** | Complexity, Hotspots, Refactoring Targets |
 | **ARCHITECTURE** | Boundary Violations |

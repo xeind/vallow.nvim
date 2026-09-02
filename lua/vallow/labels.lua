@@ -23,6 +23,7 @@ M.label = {
   dev_dep_in_prod = "dev dep in production",
   css_token_drift = "CSS token drift",
   raw_style_value = "raw style value",
+  stale_suppressions = "stale suppression",
 }
 
 return M

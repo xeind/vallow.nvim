@@ -88,6 +88,13 @@ M.defaults = {
       order = 5,
       severity = "hint",
     },
+    stale_suppressions = {
+      icon = "󰅚",
+      label = "Stale Suppressions",
+      section = "issues",
+      order = 6,
+      severity = "hint",
+    },
     -- DUPLICATES
     clone_groups = { icon = "󰏗", label = "Clone Groups", section = "duplicates", order = 1, severity = "hint" },
     -- HEALTH
@@ -138,6 +145,7 @@ M.defaults = {
       dev_dep_in_prod = { enabled = true, severity = "error" },
       css_token_drift = { enabled = true, severity = "warn" },
       raw_style_value = { enabled = true, severity = "hint" },
+      stale_suppressions = { enabled = true, severity = "hint" },
     },
   },
 

@@ -572,6 +572,20 @@ M._normalize = function(raw, root)
   end
   findings.dev_dep_in_prod.count = #findings.dev_dep_in_prod.items
 
+  -- stale_suppressions[]: fallow-ignore markers that no longer suppress anything
+  for _, v in ipairs(check.stale_suppressions or {}) do
+    table.insert(findings.stale_suppressions.items, {
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
+      lnum = v.line or 1,
+      col = v.col or 0,
+      name = (v.origin and v.origin.issue_kind) or "",
+      actions = v.actions,
+      introduced = v.introduced,
+    })
+  end
+  findings.stale_suppressions.count = #findings.stale_suppressions.items
+
   -- css_token_drift[] + raw_style_value[] (v3.0+ styling in audit)
   local function push_style(bucket, item)
     table.insert(bucket.items, {
@@ -686,6 +700,7 @@ M._normalize = function(raw, root)
     "circular_deps",
     "boundary_violations",
     "dev_dep_in_prod",
+    "stale_suppressions",
     "css_token_drift",
     "raw_style_value",
     "health_complexity",
@@ -842,6 +857,7 @@ M._empty_findings = function()
     boundary_violations = { count = 0, items = {} },
     -- ISSUES (v3.1+)
     dev_dep_in_prod = { count = 0, items = {} },
+    stale_suppressions = { count = 0, items = {} },
     -- DUPLICATES
     clone_groups = { count = 0, items = {} },
     -- STYLING (fallow audit v3.0+)

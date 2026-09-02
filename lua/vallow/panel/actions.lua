@@ -140,6 +140,79 @@ M.setup = function(buf)
   map("gi", function()
     M.inspect(buf)
   end)
+  map("x", function()
+    M.ignore(buf)
+  end)
+end
+
+-- Categories whose findings can be exempted per file with ignoreExports.
+local EXPORT_CATEGORIES = {
+  unused_exports = true,
+  unused_types = true,
+  unused_enum_members = true,
+  unused_class_members = true,
+  unused_members = true,
+}
+
+-- Offer the ways to silence the finding under the cursor.
+M.ignore = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then
+    vim.notify("vallow: no finding on this row", vim.log.levels.INFO)
+    return
+  end
+  local root = require("vallow.panel").state.results
+  root = root and root.repo_root or require("vallow.runner").find_root()
+  if not root then
+    return
+  end
+  local ignore = require("vallow.ignore")
+  local rel = item.relative_path or ""
+  local cat = M._category_at_cursor(buf) or ""
+
+  local choices = {}
+  if rel ~= "" then
+    table.insert(choices, {
+      label = ("Add %s to ignoreFindings in .fallowrc.json"):format(rel),
+      run = function()
+        return ignore.add_finding(root, rel)
+      end,
+    })
+    if EXPORT_CATEGORIES[cat] and item.name and item.name ~= "" then
+      table.insert(choices, {
+        label = ("Add %s to ignoreExports for %s"):format(item.name, rel),
+        run = function()
+          return ignore.add_export(root, rel, item.name)
+        end,
+      })
+    end
+  end
+  for _, action in ipairs(item.actions or {}) do
+    if type(action) == "table" and action.comment then
+      table.insert(choices, {
+        label = ("Insert suppression comment: %s"):format(action.comment),
+        run = function()
+          return ignore.insert_comment(item.path, item.lnum, action)
+        end,
+      })
+    end
+  end
+
+  if #choices == 0 then
+    vim.notify("vallow: nothing to ignore on this row", vim.log.levels.INFO)
+    return
+  end
+
+  vim.ui.select(choices, {
+    prompt = "vallow: ignore this finding",
+    format_item = function(choice)
+      return choice.label
+    end,
+  }, function(choice)
+    if choice and choice.run() then
+      require("vallow.panel").refresh()
+    end
+  end)
 end
 
 -- Inspect the file of the row under the cursor.
@@ -795,6 +868,19 @@ M.filter_current_buf = function(buf)
 end
 
 -- ── Internal ─────────────────────────────────────────────────────────
+
+-- Category key of the nearest header above the cursor.
+M._category_at_cursor = function(buf)
+  local lnum = vim.api.nvim_win_get_cursor(0)[1]
+  local line_map = require("vallow.panel.render").get_line_map(buf)
+  for l = lnum, 1, -1 do
+    local entry = line_map[l]
+    if entry and entry._type == "header" then
+      return entry.key
+    end
+  end
+  return nil
+end
 
 M._item_at_cursor = function(buf)
   local lnum = vim.api.nvim_win_get_cursor(0)[1]

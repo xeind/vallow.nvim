@@ -200,6 +200,16 @@ ACTIONS ~
             that only the ones it introduced (marked +) remain.
   gi        Inspect the file on this row — same float as
             |:VallowInspect|.
+  x         Ignore the finding under the cursor. |vim.ui.select| offers:
+            add the file to ignoreFindings in .fallowrc.json, add the
+            export to ignoreExports (unused exports only), or insert the
+            suppression comment fallow suggests for it. Every choice asks
+            for confirmation first, and the panel refreshes afterwards.
+
+            The config file is read with vim.json.decode and written back
+            with 2-space indent and sorted keys, so an existing file keeps
+            its content but not its key order. Comments in a .fallowrc
+            file are not preserved.
   >         Widen the panel by 5 columns (vertical split) or 5 rows.
   <         Narrow the panel by 5 columns or rows.
   <2-LeftMouse>
@@ -552,7 +562,8 @@ JSDoc tags (treated as suppression by fallow): >ts
 <
 
 Stale suppressions (suppressing an issue that no longer exists) are
-reported as their own finding type so you can clean them up.
+reported as their own finding type so you can clean them up. They appear
+in the panel under ISSUES as "Stale Suppressions".
 
 ==============================================================================
 10. LUA API                                                    *vallow-api*

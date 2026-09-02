@@ -318,6 +318,70 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 10. Ignore actions: JSON writing, and the stale_suppressions category.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local ignore = require("vallow.ignore")
+
+  eq(
+    "ignore: 2-space indent",
+    ignore.encode({ ignoreFindings = { "src/a.ts" } }),
+    '{\n  "ignoreFindings": [\n    "src/a.ts"\n  ]\n}'
+  )
+
+  local fixture = vim.fn.getcwd()
+  local tmp = vim.fn.tempname()
+  vim.fn.mkdir(tmp, "p")
+  vim.fn.system({ "cp", "-r", fixture .. "/package.json", fixture .. "/tsconfig.json", fixture .. "/src", tmp })
+  local cfg_path = ignore.config_path(tmp)
+  vim.fn.writefile({ '{ "entry": ["src/index.ts"] }' }, cfg_path)
+
+  -- confirm() cannot prompt in a headless run.
+  local real_confirm = vim.fn.confirm
+  vim.fn.confirm = function()
+    return 1
+  end
+
+  ok("ignore: add_finding writes", ignore.add_finding(tmp, "src/a.ts"))
+  ok("ignore: add_export writes", ignore.add_export(tmp, "src/a.ts", "unusedFn"))
+  ok("ignore: add_export merges", ignore.add_export(tmp, "src/a.ts", "Dead"))
+  local written = ignore.read(cfg_path)
+  ok("ignore: keeps existing keys", vim.deep_equal(written.entry, { "src/index.ts" }), vim.inspect(written))
+  ok("ignore: ignoreFindings", vim.deep_equal(written.ignoreFindings, { "src/a.ts" }), vim.inspect(written))
+  eq("ignore: one export rule", #written.ignoreExports, 1)
+  ok(
+    "ignore: exports merged into the rule",
+    vim.deep_equal(written.ignoreExports[1], { file = "src/a.ts", exports = { "unusedFn", "Dead" } }),
+    vim.inspect(written.ignoreExports)
+  )
+  vim.fn.confirm = real_confirm
+
+  -- A marker over a used export is stale; fallow reports it, the panel shows it.
+  vim.fn.delete(cfg_path)
+  local index = tmp .. "/src/index.ts"
+  local body = vim.fn.readfile(index)
+  table.insert(body, 1, "// fallow-ignore-next-line unused-export")
+  vim.fn.writefile(body, index)
+
+  vim.cmd("enew")
+  vim.cmd("cd " .. tmp)
+  require("vallow.runner").run(function(results)
+    eq("stale: counted", count(results, "stale_suppressions"), 1)
+    eq("stale: issue kind", results.findings.stale_suppressions.items[1].name, "unused-export")
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.b[buf].vallow_open_cats = { stale_suppressions = true }
+    require("vallow.panel.render").render(buf, results, nil)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    ok("stale: category rendered", has_line(lines, "Stale Suppressions%s+1"), vim.inspect(lines))
+    require("vallow.panel.render").clear(buf)
+    vim.api.nvim_buf_delete(buf, { force = true })
+
+    vim.cmd("cd " .. fixture)
+    vim.fn.delete(tmp, "rf")
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

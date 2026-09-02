@@ -776,7 +776,7 @@ M._render_items = function(cat_key, items, push, hl_last, win_width)
         end
       end
     end
-  elseif cat_key == "css_token_drift" or cat_key == "raw_style_value" then
+  elseif cat_key == "css_token_drift" or cat_key == "raw_style_value" or cat_key == "stale_suppressions" then
     for _, item in ipairs(items) do
       local icon = file_icon(item.relative_path or "")
       local p = M._truncate(item.relative_path or "", win_width - #indent - #icon - 10)
