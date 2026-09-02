@@ -72,3 +72,34 @@ end, { desc = "Export vallow findings as markdown in a new buffer" })
 vim.api.nvim_create_user_command("VallowSummary", function()
   require("vallow").summary()
 end, { desc = "Show a compact findings summary float" })
+
+vim.api.nvim_create_user_command("VallowInstall", function(opts)
+  local args = vim.split(vim.trim(opts.args or ""), "%s+")
+  local binary = "fallow"
+  if args[1] == "lsp" then
+    binary = "fallow-lsp"
+    table.remove(args, 1)
+  end
+  local version = args[1] ~= "" and args[1] or nil
+  require("vallow.install").install({ binary = binary, version = version }, function(ok, msg)
+    if not ok then
+      vim.notify(msg, vim.log.levels.ERROR)
+    end
+  end)
+end, {
+  nargs = "*",
+  complete = function(lead)
+    return vim.tbl_filter(function(c)
+      return c:find(lead, 1, true) == 1
+    end, { "lsp" })
+  end,
+  desc = "Download the fallow binary: :VallowInstall [lsp] [version]",
+})
+
+vim.api.nvim_create_user_command("VallowUpdate", function()
+  require("vallow.install").install({}, function(ok, msg)
+    if not ok then
+      vim.notify(msg, vim.log.levels.ERROR)
+    end
+  end)
+end, { desc = "Download the latest fallow binary" })

@@ -41,6 +41,30 @@ M.find_root = function()
   return nil
 end
 
+-- Resolve the fallow binary. Returns (cmd, source) or nil when nothing is found.
+-- Order: explicit config, project node_modules, PATH, downloaded copy.
+M.resolve_cmd = function(root)
+  local config = require("vallow.config")
+  local cfg = config.get()
+  if cfg.fallow_cmd and cfg.fallow_cmd ~= config.defaults.fallow_cmd then
+    return cfg.fallow_cmd, "config"
+  end
+  if root and root ~= "" then
+    local local_bin = root .. "/node_modules/.bin/fallow"
+    if vim.fn.executable(local_bin) == 1 then
+      return local_bin, "node_modules"
+    end
+  end
+  if vim.fn.executable(config.defaults.fallow_cmd) == 1 then
+    return config.defaults.fallow_cmd, "PATH"
+  end
+  local downloaded = require("vallow.install").path()
+  if vim.fn.executable(downloaded) == 1 then
+    return downloaded, "data"
+  end
+  return nil
+end
+
 M.run = function(callback)
   _gen = _gen + 1
   local gen = _gen
@@ -56,11 +80,22 @@ M.run = function(callback)
     callback({ findings = M._empty_findings() })
     return
   end
+  local bin = M.resolve_cmd(root)
+  if not bin then
+    require("vallow.install").prompt(function(installed)
+      if installed then
+        M.run(user_callback)
+      else
+        callback({ error = require("vallow.install").instructions(), findings = M._empty_findings() })
+      end
+    end)
+    return
+  end
   local stdout, stderr = {}, {}
 
   -- Combined mode: plain fallow run. Health flags only go through _run_separate
   -- (fallow combined mode may not support --score/--hotspots/--targets).
-  local cmd = { cfg.fallow_cmd, "--format", "json", "--quiet" }
+  local cmd = { bin, "--format", "json", "--quiet" }
   -- Production mode: exclude test/dev files (toggled via `p` in the panel)
   if require("vallow.panel").state.production then
     table.insert(cmd, "--production")
@@ -125,7 +160,7 @@ M.run = function(callback)
     timer:stop()
     timer:close()
     callback({
-      error = "vallow: failed to start '" .. cfg.fallow_cmd .. "' (not found in PATH?)",
+      error = "vallow: failed to start '" .. bin .. "' (not found in PATH?)",
       findings = M._empty_findings(),
     })
     return
@@ -152,12 +187,13 @@ end
 
 M._run_separate = function(gen, root, cfg, callback)
   local analyses = cfg.analyses or { "dead-code", "dupes", "health" }
+  local bin = M.resolve_cmd(root)
   local production = require("vallow.panel").state.production
   local extra = cfg.fallow_args or {}
   local jobs = {}
   for _, a in ipairs(analyses) do
     if a == "dead-code" then
-      local cmd = { cfg.fallow_cmd, "dead-code", "--format", "json", "--quiet" }
+      local cmd = { bin, "dead-code", "--format", "json", "--quiet" }
       if production then
         table.insert(cmd, "--production")
       end
@@ -166,7 +202,7 @@ M._run_separate = function(gen, root, cfg, callback)
       end
       jobs[#jobs + 1] = { key = "dead_code", cmd = cmd }
     elseif a == "dupes" then
-      local cmd = { cfg.fallow_cmd, "dupes", "--format", "json", "--quiet" }
+      local cmd = { bin, "dupes", "--format", "json", "--quiet" }
       if production then
         table.insert(cmd, "--production")
       end
@@ -175,7 +211,7 @@ M._run_separate = function(gen, root, cfg, callback)
       end
       jobs[#jobs + 1] = { key = "dupes", cmd = cmd }
     elseif a == "health" then
-      local cmd = { cfg.fallow_cmd, "health", "--format", "json", "--quiet", "--score", "--hotspots", "--targets" }
+      local cmd = { bin, "health", "--format", "json", "--quiet", "--score", "--hotspots", "--targets" }
       if production then
         table.insert(cmd, "--production")
       end

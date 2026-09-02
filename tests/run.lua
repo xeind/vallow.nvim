@@ -216,6 +216,28 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 7. resolve_cmd order: config override, node_modules/.bin, PATH.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local runner = require("vallow.runner")
+  local tmp = vim.fn.tempname()
+  local bin_dir = tmp .. "/node_modules/.bin"
+  vim.fn.mkdir(bin_dir, "p")
+  local local_bin = bin_dir .. "/fallow"
+  vim.fn.writefile({ "#!/bin/sh", "echo local" }, local_bin)
+  vim.uv.fs_chmod(local_bin, 493)
+
+  eq("resolve: node_modules wins over PATH", runner.resolve_cmd(tmp), local_bin)
+  eq("resolve: falls back to PATH", runner.resolve_cmd(vim.fn.tempname()), "fallow")
+
+  require("vallow").setup({ fallow_cmd = "/custom/fallow" })
+  eq("resolve: config wins", runner.resolve_cmd(tmp), "/custom/fallow")
+
+  require("vallow").setup({})
+  vim.fn.delete(tmp, "rf")
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

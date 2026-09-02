@@ -38,7 +38,14 @@ package.json in the project root to detect your project.
 
 Required:
   • Neovim >= 0.10
-  • fallow CLI  https://fallow.tools/install
+  • fallow CLI  https://fallow.tools/install, or |:VallowInstall|
+
+vallow resolves the fallow binary in this order:
+  1. `fallow_cmd`, when set to something other than "fallow"
+  2. <project>/node_modules/.bin/fallow
+  3. fallow on $PATH
+  4. stdpath("data")/vallow/bin/fallow
+  5. nothing found — vallow offers a download once per session
 
 Optional:
   • nvim-web-devicons  — file-type icons in the panel
@@ -107,6 +114,21 @@ subsequent opens results are shown instantly from cache.
 :VallowSummary
     Open a compact floating summary showing per-category counts.
     Close with q, <Esc>, <CR>, or <Space>.
+
+                                                           *:VallowInstall*
+:VallowInstall [lsp] [{version}]
+    Download the standalone fallow binary into
+    `stdpath("data")/vallow/bin` with curl, mark it executable, and run
+    --version to confirm it works. With no {version}, the latest GitHub
+    release is used; when the network is unreachable, 3.22.0. Pass `lsp`
+    to fetch fallow-lsp instead.
+
+    Release signatures (.sig) are published but are not verified.
+
+                                                            *:VallowUpdate*
+:VallowUpdate
+    Download the latest fallow binary. Same as :VallowInstall with no
+    arguments.
 
 ==============================================================================
 5. PANEL KEYMAPS                                          *vallow-keymaps*

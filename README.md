@@ -40,7 +40,27 @@ npm install --save-dev fallow  # local to project
 cargo install fallow       # or via Cargo
 ```
 
-Local install:
+Or let vallow fetch the standalone binary:
+
+```vim
+:VallowInstall          " latest release into stdpath("data")/vallow/bin
+:VallowInstall 3.22.0   " a specific version
+:VallowInstall lsp      " fallow-lsp
+:VallowUpdate           " latest again
+```
+
+The download uses `curl`. Release signatures (`.sig`) are published but vallow
+does not verify them.
+
+vallow looks for the binary in this order:
+
+1. `fallow_cmd`, when you set it to something other than `"fallow"`
+2. `<project>/node_modules/.bin/fallow`
+3. `fallow` on `PATH`
+4. `stdpath("data")/vallow/bin/fallow`
+5. nothing found: vallow offers the download once per session
+
+A local install therefore needs no configuration. To pin one explicitly:
 
 ```lua
 require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
@@ -57,6 +77,8 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow search` | Search findings |
 | `:VallowRefresh` | Re-run fallow and refresh |
 | `:VallowSearch` | Search findings with snacks / telescope / fzf-lua / vim.ui.select |
+| `:VallowInstall [lsp] [version]` | Download the fallow (or fallow-lsp) binary |
+| `:VallowUpdate` | Download the latest fallow binary |
 
 Press `<CR>` on any issue to jump to the file and line.
 
