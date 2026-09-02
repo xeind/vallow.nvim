@@ -120,16 +120,6 @@ M.open = function()
     end,
   })
 
-  -- Re-apply diagnostics when a new buffer is opened after analysis ran
-  vim.api.nvim_create_autocmd("BufEnter", {
-    group = vim.api.nvim_create_augroup("VallowDiagBufEnter", { clear = true }),
-    callback = function(ev)
-      if M.state.results and M.state.results.findings then
-        require("vallow.diagnostics").apply_buf(ev.buf, M.state.results.findings)
-      end
-    end,
-  })
-
   if M.state.results then
     -- Results already cached (prefetched) — render immediately, then refresh silently
     local render = require("vallow.panel.render")

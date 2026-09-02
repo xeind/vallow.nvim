@@ -4,6 +4,18 @@ M.setup = function(opts)
   require("vallow.config").setup(opts)
   require("vallow.panel.highlights").setup()
 
+  -- Re-apply diagnostics when a buffer is opened after a run. Registered here,
+  -- not in panel.open(), so prefetch() alone is enough for new buffers.
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = vim.api.nvim_create_augroup("VallowDiagBufEnter", { clear = true }),
+    callback = function(ev)
+      local results = require("vallow.panel").state.results
+      if results and results.findings then
+        require("vallow.diagnostics").apply_buf(ev.buf, results.findings)
+      end
+    end,
+  })
+
   -- Keep the package.json overlay up to date when a manifest is opened after
   -- a run. Results live in the panel state, so this is cheap when empty.
   vim.api.nvim_create_autocmd("BufEnter", {
