@@ -167,6 +167,16 @@ local DEPENDENCY_CATEGORIES = {
 }
 
 -- Ask fallow for the evidence behind an unused export or dependency.
+-- Categories whose findings can be exempted per file with ignoreExports;
+-- also the ones gt can trace by name.
+local EXPORT_CATEGORIES = {
+  unused_exports = true,
+  unused_types = true,
+  unused_enum_members = true,
+  unused_class_members = true,
+  unused_members = true,
+}
+
 M.trace = function(buf)
   local item = M._item_at_cursor(buf)
   if not item or item._type then
@@ -257,15 +267,6 @@ M._open_clone_diff = function(locs)
     )
   end
 end
-
--- Categories whose findings can be exempted per file with ignoreExports.
-local EXPORT_CATEGORIES = {
-  unused_exports = true,
-  unused_types = true,
-  unused_enum_members = true,
-  unused_class_members = true,
-  unused_members = true,
-}
 
 -- Offer the ways to silence the finding under the cursor.
 M.ignore = function(buf)
