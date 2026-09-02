@@ -412,6 +412,48 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 12. Trace: the export and dependency envelopes, rendered as a tree.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local runner = require("vallow.runner")
+  local root = runner.find_root()
+  local bin = runner.resolve_cmd(root)
+  local trace = require("vallow.trace")
+
+  runner._job(
+    { bin, "dead-code", "--trace", "src/a.ts:unusedFn", "--format", "json", "--quiet" },
+    root,
+    function(job_ok, data)
+      vim.schedule(function()
+        ok("trace: export envelope", job_ok and data and data.kind == "trace", vim.inspect(data))
+        trace._show_export(data, root)
+        local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+        ok("trace: export head", has_line(lines, "src/a%.ts:unusedFn"), vim.inspect(lines))
+        ok("trace: unused fact", has_line(lines, "├─ unused · file reachable"), vim.inspect(lines))
+        ok("trace: reference branch", has_line(lines, "direct references %(0%)"), vim.inspect(lines))
+        ok("trace: reason", has_line(lines, "No references found"), vim.inspect(lines))
+        vim.api.nvim_win_close(0, true)
+
+        runner._job(
+          { bin, "dead-code", "--trace-dependency", "lodash", "--format", "json", "--quiet" },
+          root,
+          function(dep_ok, dep)
+            vim.schedule(function()
+              ok("trace: dependency envelope", dep_ok and dep and dep.package_name == "lodash", vim.inspect(dep))
+              trace._show_dependency(dep, root)
+              local dep_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+              ok("trace: dependency head", has_line(dep_lines, "  lodash"), vim.inspect(dep_lines))
+              ok("trace: importers branch", has_line(dep_lines, "imported by %(0%)"), vim.inspect(dep_lines))
+              vim.api.nvim_win_close(0, true)
+              next_step()
+            end)
+          end
+        )
+      end)
+    end
+  )
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

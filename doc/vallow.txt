@@ -207,6 +207,11 @@ ACTIONS ~
             type for the session. The K float also gains the first
             paragraph once it arrives. Hotspots, refactoring targets and
             raw style values have no explanation.
+  gt        Trace the finding under the cursor. On an unused export it
+            runs `fallow dead-code --trace <file>:<name>`; on a dependency
+            it runs `--trace-dependency <name>`. The evidence — direct
+            references, re-export chains, importers — is drawn as a tree.
+            <CR> on a path line jumps to it.
   x         Ignore the finding under the cursor. |vim.ui.select| offers:
             add the file to ignoreFindings in .fallowrc.json, add the
             export to ignoreExports (unused exports only), or insert the

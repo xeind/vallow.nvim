@@ -146,6 +146,36 @@ M.setup = function(buf)
   map("ge", function()
     require("vallow.explain").open(M._category_at_cursor(buf))
   end)
+  map("gt", function()
+    M.trace(buf)
+  end)
+end
+
+-- Categories whose findings name a package rather than an export.
+local DEPENDENCY_CATEGORIES = {
+  unused_deps = true,
+  unused_dev_deps = true,
+  unused_optional_deps = true,
+  unused_all_deps = true,
+  unlisted_deps = true,
+}
+
+-- Ask fallow for the evidence behind an unused export or dependency.
+M.trace = function(buf)
+  local item = M._item_at_cursor(buf)
+  if not item or item._type then
+    return
+  end
+  local cat = M._category_at_cursor(buf) or ""
+  local trace = require("vallow.trace")
+  local name = item.name or ""
+  if EXPORT_CATEGORIES[cat] and name ~= "" and (item.relative_path or "") ~= "" then
+    trace.export(item.relative_path, name)
+  elseif DEPENDENCY_CATEGORIES[cat] and name ~= "" then
+    trace.dependency(name)
+  else
+    vim.notify("vallow: trace works on unused exports and dependencies", vim.log.levels.INFO)
+  end
 end
 
 -- Categories whose findings can be exempted per file with ignoreExports.

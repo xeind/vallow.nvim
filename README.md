@@ -107,6 +107,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `gi` | Inspect the file on this row |
 | `x` | Ignore this finding: `.fallowrc.json` entry or suppression comment |
 | `ge` | Explain this issue type (`fallow explain`) |
+| `gt` | Trace an unused export or dependency |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
 | `Q` | Send to quickfix |
