@@ -14,6 +14,14 @@ M.defaults = {
     prefix = "vallow ", -- change to " " for Nerd Font icon
   },
 
+  -- Grey out unused files in the file explorers. Each explorer also needs the
+  -- one-line hook in its own setup; see :help vallow-integrations.
+  integrations = {
+    nvim_tree = true,
+    neo_tree = true,
+    oil = true,
+  },
+
   window = {
     position = "right",
     size = 0.5,

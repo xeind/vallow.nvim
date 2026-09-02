@@ -175,6 +175,14 @@ require("vallow").setup({
     prefix = "vallow ",  -- " " for a Nerd Font icon
   },
 
+  -- Grey out unused files in the file explorers. Each explorer also needs a
+  -- one-line hook in its own setup, see "File explorers" below.
+  integrations = {
+    nvim_tree = true,
+    neo_tree  = true,
+    oil       = true,
+  },
+
   keymaps = {
     close        = "q",
     jump         = "<CR>",
@@ -213,6 +221,42 @@ vim.o.statusline = "%{%v:lua.require('vallow').statusline()%}"
 ```
 
 Shows `vallow 42` when issues exist, `vallow ✓` when clean, empty when not run.
+
+### File explorers
+
+Files fallow reports as unused are greyed out with `VallowUnusedFile` (linked to
+`Comment`). Each explorer reads its hooks from its own setup, so add one line there:
+
+```lua
+-- nvim-tree
+require("nvim-tree").setup({
+  renderer = {
+    decorators = {
+      "Git", "Open", "Hidden", "Modified", "Bookmark", "Diagnostics", "Copied", "Cut",
+      require("vallow.integrations.nvim_tree").decorator,
+    },
+  },
+})
+
+-- neo-tree
+require("neo-tree").setup({
+  components = { name = require("vallow.integrations.neo_tree").name },
+})
+
+-- oil
+require("oil").setup({
+  view_options = { highlight_filename = require("vallow.integrations.oil").highlight_filename },
+})
+```
+
+The decorations update after every fallow run and stay until the next one. Turn
+any of them off with `integrations = { nvim_tree = false, neo_tree = false, oil = false }`.
+
+vallow fires `User VallowResults` after each run, so you can hook your own code:
+
+```lua
+vim.api.nvim_create_autocmd("User", { pattern = "VallowResults", callback = function() ... end })
+```
 
 ### Configuring fallow
 

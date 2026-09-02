@@ -46,6 +46,9 @@ local function apply()
     VallowSevWarn = { link = "DiagnosticWarn" },
     VallowSevHint = { link = "DiagnosticHint" },
 
+    -- ── Explorer decorations ────────────────────────────────────────────
+    VallowUnusedFile = { link = "Comment" },
+
     -- ── Tab strip ───────────────────────────────────────────────────────
     VallowTabActive = { link = "TabLineSel" },
     VallowTabInactive = { link = "TabLine" },

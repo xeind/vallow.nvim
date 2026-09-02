@@ -18,6 +18,7 @@ CONTENTS                                                    *vallow-contents*
   9. Suppression Comments ....... |vallow-suppress|
  10. Lua API ................... |vallow-api|
  11. Health Check .............. |vallow-health|
+ 12. Integrations .............. |vallow-integrations|
 
 ==============================================================================
 1. INTRODUCTION                                               *vallow-intro*
@@ -363,6 +364,14 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     statusline = {
       prefix = "vallow ",  -- e.g. " " for a Nerd Font icon
     },
+
+    -- Grey out unused files in the file explorers. Each explorer also
+    -- needs a one-line hook in its own setup, see |vallow-integrations|.
+    integrations = {
+      nvim_tree = true,
+      neo_tree  = true,
+      oil       = true,
+    },
   })
 <
 
@@ -665,6 +674,60 @@ Checks performed:
 If the health check cannot find a project root, vallow will return empty
 results when you open the panel. Make sure you open Neovim from inside a
 JavaScript/TypeScript project directory.
+
+==============================================================================
+12. INTEGRATIONS                                      *vallow-integrations*
+
+FILE EXPLORERS ~
+
+Files fallow reports as unused are drawn with the highlight group
+VallowUnusedFile, which links to Comment. The decorations are refreshed
+after every fallow run and stay until the next one.
+
+Each explorer reads its hooks from its own setup, so add one line there: >lua
+
+  -- nvim-tree
+  require("nvim-tree").setup({
+    renderer = {
+      decorators = {
+        "Git", "Open", "Hidden", "Modified", "Bookmark", "Diagnostics",
+        "Copied", "Cut",
+        require("vallow.integrations.nvim_tree").decorator,
+      },
+    },
+  })
+
+  -- neo-tree
+  require("neo-tree").setup({
+    components = { name = require("vallow.integrations.neo_tree").name },
+  })
+
+  -- oil
+  require("oil").setup({
+    view_options = {
+      highlight_filename =
+        require("vallow.integrations.oil").highlight_filename,
+    },
+  })
+<
+Turn any of them off without touching the explorer config: >lua
+  require("vallow").setup({
+    integrations = { nvim_tree = false, neo_tree = false, oil = false },
+  })
+<
+                                                      *vallow-user-events*
+USER EVENTS ~
+
+vallow fires the autocommand event "User VallowResults" after every run,
+once results, diagnostics, and decorations are in place. >lua
+
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "VallowResults",
+    callback = function()
+      print(require("vallow").get_counts().total)
+    end,
+  })
+<
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

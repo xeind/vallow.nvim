@@ -114,7 +114,7 @@ M.open = function()
               require("vallow.config").get()
             )
           end
-          require("vallow.diagnostics").apply(results.findings)
+          M._on_results(results)
         end)
       end
     end,
@@ -206,7 +206,7 @@ M.refresh = function()
       )
     end
     -- Push findings as inline diagnostics to open buffers
-    require("vallow.diagnostics").apply(results.findings)
+    M._on_results(results)
   end
 
   if M.state.mode == "audit" then
@@ -282,7 +282,7 @@ M._bg_refresh = function()
         )
       end
     end
-    require("vallow.diagnostics").apply(results.findings)
+    M._on_results(results)
   end)
 end
 
@@ -305,8 +305,16 @@ end
 M.prefetch = function()
   require("vallow.runner").run(function(results)
     M.state.results = results
-    require("vallow.diagnostics").apply(results.findings)
+    M._on_results(results)
   end)
+end
+
+-- Everything that reacts to a finished run: inline diagnostics, explorer
+-- decorations, and the User VallowResults event for third-party code.
+M._on_results = function(results)
+  require("vallow.diagnostics").apply(results.findings)
+  require("vallow.integrations").refresh()
+  vim.api.nvim_exec_autocmds("User", { pattern = "VallowResults", modeline = false })
 end
 
 M._is_open = function()

@@ -727,6 +727,93 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 18. Explorer decorations against fake nvim-tree / neo-tree / oil modules.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local panel = require("vallow.panel")
+  local saved = panel.state.results
+  local cwd = vim.fn.getcwd()
+  local dead = cwd .. "/src/dead.ts"
+  panel.state.results = {
+    findings = { unused_files = { count = 1, items = { { path = dead, relative_path = "src/dead.ts" } } } },
+  }
+
+  local reloaded = false
+  package.preload["nvim-tree.api"] = function()
+    local Class = {}
+    function Class:extend()
+      local child = setmetatable({}, { __index = self })
+      child.extend = self.extend
+      return child
+    end
+    return {
+      decorator = { UserDecorator = Class },
+      tree = {
+        is_visible = function()
+          return true
+        end,
+        reload = function()
+          reloaded = true
+        end,
+      },
+    }
+  end
+  package.preload["neo-tree.sources.common.components"] = function()
+    return {
+      name = function(_, node)
+        return { text = node.name, highlight = "NeoTreeFileName" }
+      end,
+    }
+  end
+  package.preload["oil"] = function()
+    return {
+      get_current_dir = function()
+        return cwd .. "/src/"
+      end,
+    }
+  end
+
+  local tree = require("vallow.integrations.nvim_tree")
+  ok("nvim-tree: decorator exposed", tree.decorator ~= nil)
+  eq("nvim-tree: unused file greyed", tree.decorator:highlight_group({ absolute_path = dead }), "VallowUnusedFile")
+  eq("nvim-tree: used file untouched", tree.decorator:highlight_group({ absolute_path = cwd .. "/src/a.ts" }), nil)
+
+  local neo = require("vallow.integrations.neo_tree")
+  local unused_node = { type = "file", path = dead, name = "dead.ts" }
+  eq("neo-tree: unused file greyed", neo.name({}, unused_node, {}).highlight, "VallowUnusedFile")
+  local used_node = { type = "file", path = cwd .. "/src/a.ts", name = "a.ts" }
+  eq("neo-tree: used file untouched", neo.name({}, used_node, {}).highlight, "NeoTreeFileName")
+
+  local oil = require("vallow.integrations.oil")
+  eq("oil: unused file greyed", oil.highlight_filename({ name = "dead.ts", type = "file" }), "VallowUnusedFile")
+  eq("oil: used file untouched", oil.highlight_filename({ name = "a.ts", type = "file" }), nil)
+  eq("oil: directories untouched", oil.highlight_filename({ name = "dead.ts", type = "directory" }), nil)
+
+  require("vallow").setup({ integrations = { oil = false, nvim_tree = false } })
+  eq("integration: oil opt-out", oil.highlight_filename({ name = "dead.ts", type = "file" }), nil)
+  eq("integration: nvim-tree opt-out", tree.decorator:highlight_group({ absolute_path = dead }), nil)
+
+  require("vallow").setup({})
+  local fired = false
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "VallowResults",
+    once = true,
+    callback = function()
+      fired = true
+    end,
+  })
+  panel._on_results({ findings = panel.state.results.findings })
+  ok("results: User VallowResults fired", fired)
+  ok("nvim-tree: reloaded on results", reloaded)
+
+  for _, mod in ipairs({ "nvim-tree.api", "neo-tree.sources.common.components", "oil" }) do
+    package.preload[mod] = nil
+    package.loaded[mod] = nil
+  end
+  panel.state.results = saved
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
