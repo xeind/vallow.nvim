@@ -93,9 +93,13 @@ M.run = function(callback)
   end
   local stdout, stderr = {}, {}
 
-  -- Combined mode: plain fallow run. Health flags only go through _run_separate
-  -- (fallow combined mode may not support --score/--hotspots/--targets).
+  -- Combined mode: plain fallow run.
   local cmd = { bin, "--format", "json", "--quiet" }
+  -- The health score and its trend are opt-in flags; the dashboard needs both.
+  if vim.tbl_contains(cfg.analyses or {}, "health") then
+    table.insert(cmd, "--score")
+    table.insert(cmd, "--trend")
+  end
   -- Production mode: exclude test/dev files (toggled via `p` in the panel)
   if require("vallow.panel").state.production then
     table.insert(cmd, "--production")
@@ -211,7 +215,7 @@ M._run_separate = function(gen, root, cfg, callback)
       end
       jobs[#jobs + 1] = { key = "dupes", cmd = cmd }
     elseif a == "health" then
-      local cmd = { bin, "health", "--format", "json", "--quiet", "--score", "--hotspots", "--targets" }
+      local cmd = { bin, "health", "--format", "json", "--quiet", "--score", "--hotspots", "--targets", "--trend" }
       if production then
         table.insert(cmd, "--production")
       end
@@ -679,6 +683,9 @@ M._normalize = function(raw, root)
   if health_raw.health_score then
     findings.health_score = health_raw.health_score
   end
+  -- Project-wide metrics the dashboard reads. Not finding buckets: no `count`.
+  findings.vital_signs = health_raw.vital_signs
+  findings.health_trend = health_raw.health_trend
 
   -- Sort all flat item buckets by file path then line number
   local function by_file_line(a, b)

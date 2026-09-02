@@ -85,6 +85,19 @@ subsequent opens results are shown instantly from cache.
     Open the panel with one section tab active. {section} is a key of the
     sections table: health, issues, duplicates, unused_code, architecture.
 
+                                                       *:Vallow-dashboard*
+:Vallow dashboard
+    Open the health dashboard float: a block-character gauge of the
+    project health score with its letter grade, the score penalties as a
+    two-column table sorted largest first, a row of vital signs, and the
+    trend against the last saved snapshot with a sparkline per metric.
+    q or <Esc> closes.
+
+    The score comes from `fallow --score`. The trend needs a snapshot:
+    run `fallow health --save-snapshot` in the project first, otherwise
+    the trend section is left out. If "health" is not in `analyses`, the
+    float says so.
+
 :Vallow audit [{ref}]
     Run `fallow audit --base {ref}` and show the result in the panel. The
     header reads "audit vs {ref}" with the verdict and the number of
@@ -212,6 +225,8 @@ ACTIONS ~
             it runs `--trace-dependency <name>`. The evidence — direct
             references, re-export chains, importers — is drawn as a tree.
             <CR> on a path line jumps to it.
+  D         Open the health dashboard float — same as
+            |:Vallow-dashboard|.
   x         Ignore the finding under the cursor. |vim.ui.select| offers:
             add the file to ignoreFindings in .fallowrc.json, add the
             export to ignoreExports (unused exports only), or insert the

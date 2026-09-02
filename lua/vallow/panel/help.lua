@@ -43,6 +43,7 @@ local SECTIONS = {
       { key = "x", desc = "ignore finding" },
       { key = "ge", desc = "explain this issue type" },
       { key = "gt", desc = "trace export / dependency" },
+      { key = "D", desc = "health dashboard" },
       { key = "r", desc = "refresh" },
       { key = "Q", desc = "send to quickfix list" },
       { key = "y", desc = "yank path:line" },

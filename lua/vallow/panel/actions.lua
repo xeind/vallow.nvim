@@ -149,6 +149,9 @@ M.setup = function(buf)
   map("gt", function()
     M.trace(buf)
   end)
+  map("D", function()
+    require("vallow.dashboard").open()
+  end)
 end
 
 -- Categories whose findings name a package rather than an export.

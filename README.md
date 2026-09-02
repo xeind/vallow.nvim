@@ -72,6 +72,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 |---|---|
 | `:Vallow` | Toggle the panel |
 | `:Vallow health` | Open the panel on a section: `health`, `issues`, `duplicates`, `unused_code`, `architecture` |
+| `:Vallow dashboard` | Health dashboard float: score gauge, penalties, vital signs, trend |
 | `:Vallow audit [ref]` | Review the files changed since `ref` (default `main`, else `master`) |
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
 | `:Vallow refresh` | Re-run fallow and refresh |
@@ -108,6 +109,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `x` | Ignore this finding: `.fallowrc.json` entry or suppression comment |
 | `ge` | Explain this issue type (`fallow explain`) |
 | `gt` | Trace an unused export or dependency |
+| `D` | Health dashboard float |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
 | `Q` | Send to quickfix |

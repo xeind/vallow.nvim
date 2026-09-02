@@ -19,7 +19,7 @@ local function search()
 end
 
 -- :Vallow arguments: the section keys from config, plus these verbs.
-local verbs = { "audit", "production", "refresh", "search" }
+local verbs = { "audit", "dashboard", "production", "refresh", "search" }
 
 local function candidates()
   local list = vim.deepcopy(verbs)
@@ -43,6 +43,8 @@ vim.api.nvim_create_user_command("Vallow", function(opts)
     end
   elseif verb == "audit" then
     require("vallow.panel").audit(rest)
+  elseif arg == "dashboard" then
+    require("vallow.dashboard").open()
   elseif arg == "refresh" then
     require("vallow").refresh()
   elseif arg == "search" then

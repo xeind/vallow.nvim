@@ -150,6 +150,7 @@ table.insert(steps, function(next_step)
       "unused_code",
       "architecture",
       "production",
+      "dashboard",
       "refresh",
       "search",
     }) do
@@ -452,6 +453,69 @@ table.insert(steps, function(next_step)
       end)
     end
   )
+end)
+
+-- 13. Health dashboard: gauge, penalties, vital signs, and the trend sparkline.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local fixture = vim.fn.getcwd()
+  local health_dir = repo .. "/tests/fixture-health"
+  vim.cmd("enew")
+  vim.cmd("cd " .. health_dir)
+  vim.fn.delete(health_dir .. "/.fallow", "rf")
+
+  local dash = require("vallow.dashboard")
+  eq("dashboard: gauge full", dash._gauge(100), string.rep("█", 30))
+  eq("dashboard: gauge empty", dash._gauge(0), string.rep("░", 30))
+  eq("dashboard: band A", dash._band(91), "VallowSevHint")
+  eq("dashboard: band C", dash._band(62), "VallowSevWarn")
+  eq("dashboard: band F", dash._band(20), "VallowSevError")
+  eq("dashboard: sparkline", dash._sparkline({ 1, 2, 3 }), "▁▅█")
+
+  local runner = require("vallow.runner")
+  local bin = runner.resolve_cmd(health_dir)
+  -- A snapshot is what makes fallow emit health_trend on the next run.
+  runner._job({ bin, "health", "--format", "json", "--quiet", "--score", "--save-snapshot" }, health_dir, function()
+    vim.schedule(function()
+      runner.run(function(results)
+        local f = results.findings
+        ok("dashboard: score present", type(f.health_score) == "table", vim.inspect(results.error))
+        ok("dashboard: penalties present", type(f.health_score.penalties) == "table")
+        ok("dashboard: vital signs present", type(f.vital_signs) == "table")
+        ok("dashboard: trend present", type(f.health_trend) == "table", vim.inspect(f.health_trend))
+
+        local lines = dash._lines(f).lines
+        ok("dashboard: gauge line", has_line(lines, "░  %d"), vim.inspect(lines))
+        ok("dashboard: penalties heading", has_line(lines, "  Penalties"), vim.inspect(lines))
+        ok("dashboard: circular penalty", has_line(lines, "circular deps%s+%-25"), vim.inspect(lines))
+        ok("dashboard: vital signs", has_line(lines, "duplication %d"), vim.inspect(lines))
+        ok("dashboard: trend heading", has_line(lines, "  Trend vs "), vim.inspect(lines))
+        ok("dashboard: trend sparkline", has_line(lines, "Health Score  [▁▂▃▄▅▆▇█]+"), vim.inspect(lines))
+
+        -- Penalties sorted largest first.
+        local order = {}
+        for _, l in ipairs(lines) do
+          local key, value = l:match("^    (%a[%a ]-)%s+%-(%d[%d%.]*)$")
+          if key then
+            table.insert(order, tonumber(value))
+          end
+        end
+        ok("dashboard: penalties sorted", #order > 1 and order[1] >= order[2], vim.inspect(order))
+
+        -- Health switched off: one line says so.
+        require("vallow").setup({ analyses = { "dead-code" } })
+        local off = dash._lines(f).lines
+        ok("dashboard: health off", has_line(off, "not in config%.analyses"), vim.inspect(off))
+        require("vallow").setup({})
+        local none = dash._lines({}).lines
+        ok("dashboard: no score", has_line(none, "No health score yet"), vim.inspect(none))
+
+        vim.fn.delete(health_dir .. "/.fallow", "rf")
+        vim.cmd("cd " .. fixture)
+        next_step()
+      end)
+    end)
+  end)
 end)
 
 local done = false
