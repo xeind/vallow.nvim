@@ -137,6 +137,20 @@ M.setup = function(buf)
   map("i", function()
     M.toggle_inherited(buf)
   end)
+  map("gi", function()
+    M.inspect(buf)
+  end)
+end
+
+-- Inspect the file of the row under the cursor.
+M.inspect = function(buf)
+  local item = M._item_at_cursor(buf)
+  local path = item and (item.relative_path or item.path)
+  if not path or path == "" then
+    vim.notify("vallow: no file on this row", vim.log.levels.INFO)
+    return
+  end
+  require("vallow.inspect").open(path)
 end
 
 -- Audit mode: show every finding in the changed files, or only the ones the

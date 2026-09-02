@@ -77,6 +77,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow refresh` | Re-run fallow and refresh |
 | `:Vallow search` | Search findings |
 | `:VallowRefresh` | Re-run fallow and refresh |
+| `:VallowInspect` | Inspect the current file: exports, importers, findings, health |
 | `:VallowSearch` | Search findings with snacks / telescope / fzf-lua / vim.ui.select |
 | `:VallowInstall [lsp] [version]` | Download the fallow (or fallow-lsp) binary |
 | `:VallowUpdate` | Download the latest fallow binary |
@@ -103,6 +104,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `F` | Clear filter |
 | `%` | Filter findings to the file under cursor |
 | `i` | Audit mode: hide findings the change inherited |
+| `gi` | Inspect the file on this row |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
 | `Q` | Send to quickfix |

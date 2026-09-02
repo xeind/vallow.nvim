@@ -82,6 +82,10 @@ vim.api.nvim_create_user_command("VallowSummary", function()
   require("vallow").summary()
 end, { desc = "Show a compact findings summary float" })
 
+vim.api.nvim_create_user_command("VallowInspect", function()
+  require("vallow.inspect").open()
+end, { desc = "Inspect the current file with fallow inspect" })
+
 vim.api.nvim_create_user_command("VallowInstall", function(opts)
   local args = vim.split(vim.trim(opts.args or ""), "%s+")
   local binary = "fallow"

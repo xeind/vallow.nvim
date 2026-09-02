@@ -39,6 +39,7 @@ local SECTIONS = {
       { key = "ga", desc = "LSP code action (fallow-lsp)" },
       { key = "%", desc = "filter: current file" },
       { key = "i", desc = "audit: hide inherited" },
+      { key = "gi", desc = "inspect file in float" },
       { key = "r", desc = "refresh" },
       { key = "Q", desc = "send to quickfix list" },
       { key = "y", desc = "yank path:line" },

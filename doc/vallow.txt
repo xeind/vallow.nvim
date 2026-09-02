@@ -115,6 +115,13 @@ subsequent opens results are shown instantly from cache.
     Open all findings in a fuzzy picker (Snacks → Telescope → fzf-lua,
     in priority order). Results must already be loaded.
 
+                                                           *:VallowInspect*
+:VallowInspect
+    Run `fallow inspect --file` on the current buffer and show the result
+    in a float: identity, exports with reference counts, importers,
+    findings, and the health summary. <CR> on a path line jumps to it,
+    q or <Esc> closes.
+
                                                             *:VallowExport*
 :VallowExport
     Export current findings as GitHub-flavoured markdown into a new
@@ -191,6 +198,8 @@ ACTIONS ~
             (excludes test/story/spec files). Press again to turn off.
   i         Audit mode only: hide the findings the change inherited, so
             that only the ones it introduced (marked +) remain.
+  gi        Inspect the file on this row — same float as
+            |:VallowInspect|.
   >         Widen the panel by 5 columns (vertical split) or 5 rows.
   <         Narrow the panel by 5 columns or rows.
   <2-LeftMouse>
