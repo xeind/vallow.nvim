@@ -63,15 +63,20 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
 - **Peek ranges.** P highlights the full start–end range for clone groups
   and large functions.
 
-## Batch 4 — integrations
+## Batch 4 — done
 
-- **Explorer decorations.** Grey out unused files in neo-tree, nvim-tree,
-  and oil via their decoration hooks. Each optional, guarded by `pcall`.
-- **Lualine component** with per-severity counts and highlight groups.
-- **Picker extensions** registered as `vallow` for telescope and snacks,
-  with a preview at the finding line.
+- **Explorer decorations.** Unused files greyed out in nvim-tree, neo-tree,
+  and oil. Each explorer reads its hooks from its own setup, so vallow
+  exposes one hook per explorer, guarded by `pcall`. Runs end in
+  `panel._on_results`, which also fires `User VallowResults`.
+- **Lualine component.** `require("vallow").lualine()`: per-severity counts,
+  a spinner while fallow runs, a check mark when clean.
+- **Picker extensions.** `:Telescope vallow` and `Snacks.picker.vallow()`,
+  both previewing the file at the finding line.
 - **package.json overlay.** Virtual text per dependency line: unused,
-  type-only, test-only, dev in prod, unlisted.
+  type-only, test-only, dev in prod, unlisted. The runner keeps fallow's
+  `type_only_dependencies` and `test_only_dependencies` as the Misplaced
+  Deps category.
 
 ## Conventions
 
