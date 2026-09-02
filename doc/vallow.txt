@@ -225,6 +225,10 @@ ACTIONS ~
             it runs `--trace-dependency <name>`. The evidence — direct
             references, re-export chains, importers — is drawn as a tree.
             <CR> on a path line jumps to it.
+  d         On a clone group, or on one of its instance rows, open the
+            two largest instances in a new tab as two vertical windows
+            with |:diffthis| on both, each at the start of its own
+            instance. Further instances are named in a notification.
   D         Open the health dashboard float — same as
             |:Vallow-dashboard|.
   x         Ignore the finding under the cursor. |vim.ui.select| offers:

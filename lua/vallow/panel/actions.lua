@@ -149,6 +149,9 @@ M.setup = function(buf)
   map("gt", function()
     M.trace(buf)
   end)
+  map("d", function()
+    M.clone_diff(buf)
+  end)
   map("D", function()
     require("vallow.dashboard").open()
   end)
@@ -178,6 +181,80 @@ M.trace = function(buf)
     trace.dependency(name)
   else
     vim.notify("vallow: trace works on unused exports and dependencies", vim.log.levels.INFO)
+  end
+end
+
+-- Diff the two largest instances of the clone group under the cursor.
+M.clone_diff = function(buf)
+  if M._category_at_cursor(buf) ~= "clone_groups" then
+    vim.notify("vallow: diff works on clone groups", vim.log.levels.INFO)
+    return
+  end
+  local item = M._item_at_cursor(buf)
+  local locs = item and item.locations
+  if not locs or #locs < 2 then
+    vim.notify("vallow: this clone group has only one instance", vim.log.levels.INFO)
+    return
+  end
+  M._open_clone_diff(locs)
+end
+
+-- Largest first, ties broken by path so the order is stable between runs.
+M._sort_instances = function(locs)
+  local sorted = {}
+  for _, loc in ipairs(locs) do
+    table.insert(sorted, loc)
+  end
+  local function span(loc)
+    return (loc.end_lnum or loc.lnum or 1) - (loc.lnum or 1)
+  end
+  table.sort(sorted, function(a, b)
+    if span(a) ~= span(b) then
+      return span(a) > span(b)
+    end
+    return (a.path or "") < (b.path or "")
+  end)
+  return sorted
+end
+
+-- Two vertical windows in a new tab, both in diff mode, each at its own
+-- instance. Any further instances are named in a notification.
+M._open_clone_diff = function(locs)
+  local sorted = M._sort_instances(locs)
+  local left, right = sorted[1], sorted[2]
+  if not (left and right) then
+    return
+  end
+
+  local function show(cmd, loc)
+    local opened = pcall(vim.cmd, cmd .. " " .. vim.fn.fnameescape(loc.path))
+    if not opened then
+      vim.notify("vallow: cannot open " .. (loc.path or "?"), vim.log.levels.WARN)
+      return false
+    end
+    pcall(vim.api.nvim_win_set_cursor, 0, { math.max(1, loc.lnum or 1), 0 })
+    vim.cmd("diffthis")
+    return true
+  end
+
+  if not show("tabedit", left) then
+    return
+  end
+  if not show("vsplit", right) then
+    vim.cmd("tabclose")
+    return
+  end
+
+  if #sorted > 2 then
+    local rest = {}
+    for i = 3, #sorted do
+      local loc = sorted[i]
+      table.insert(rest, (loc.relative_path or loc.path or "?") .. ":" .. (loc.lnum or 1))
+    end
+    vim.notify(
+      ("vallow: %d more instance%s — %s"):format(#rest, #rest == 1 and "" or "s", table.concat(rest, ", ")),
+      vim.log.levels.INFO
+    )
   end
 end
 

@@ -543,7 +543,8 @@ M._render_items = function(cat_key, items, push, hl_last, win_width)
       local cn_pos = #row
       row = row .. cnt_s
 
-      push(row, 0, 0, nil, first and { path = first.path, lnum = first.lnum } or item)
+      -- Carry the instances on every row of the group so `d` can diff them.
+      push(row, 0, 0, nil, first and { path = first.path, lnum = first.lnum, locations = locs } or item)
       hl_last(#indent, #indent + #disp, "VallowName")
       if size_s ~= "" then
         hl_last(sz_pos, sz_pos + #size_s, size_hl)
@@ -558,7 +559,13 @@ M._render_items = function(cat_key, items, push, hl_last, win_width)
         local rp = M._truncate(loc.relative_path or "", win_width - #sub - #icon - 6)
         local ln = loc.lnum and (":" .. loc.lnum) or ""
         local sub_row = sub .. icon .. rp .. ln
-        push(sub_row, #sub, #sub + #icon + #rp, "VallowPath", { path = loc.path, lnum = loc.lnum })
+        push(
+          sub_row,
+          #sub,
+          #sub + #icon + #rp,
+          "VallowPath",
+          { path = loc.path, lnum = loc.lnum, end_lnum = loc.end_lnum, locations = locs }
+        )
         if ln ~= "" then
           hl_last(#sub + #icon + #rp, #sub + #icon + #rp + #ln, "VallowKind")
         end

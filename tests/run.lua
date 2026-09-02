@@ -571,6 +571,73 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 15. Clone diff: instances sorted by size, two largest opened side by side.
+table.insert(steps, function(next_step)
+  local fixture = vim.fn.getcwd()
+  local health_dir = repo .. "/tests/fixture-health"
+  vim.cmd("enew")
+  vim.cmd("cd " .. health_dir)
+  require("vallow").setup({})
+
+  require("vallow.runner").run(function(results)
+    eq("diff: clone group found", count(results, "clone_groups"), 1)
+    local group = results.findings.clone_groups.items[1]
+    eq("diff: three instances", #group.locations, 3)
+    ok("diff: instance end line", group.locations[1].end_lnum == 28, vim.inspect(group.locations[1]))
+
+    -- The panel rows carry the instances so `d` can reach them.
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.b[buf].vallow_open_cats = { clone_groups = true }
+    require("vallow.panel.render").render(buf, results, nil)
+    local with_locs = 0
+    for _, entry in pairs(require("vallow.panel.render").get_line_map(buf)) do
+      if type(entry) == "table" and entry.locations then
+        with_locs = with_locs + 1
+      end
+    end
+    eq("diff: rows carry instances", with_locs, 4)
+    require("vallow.panel.render").clear(buf)
+    vim.api.nvim_buf_delete(buf, { force = true })
+
+    local actions = require("vallow.panel.actions")
+    local sorted = actions._sort_instances({
+      { path = "/b.ts", lnum = 5, end_lnum = 9 },
+      { path = "/a.ts", lnum = 1, end_lnum = 40 },
+      { path = "/c.ts", lnum = 2, end_lnum = 6 },
+    })
+    eq("diff: largest first", sorted[1].path, "/a.ts")
+    eq("diff: ties by path", sorted[2].path, "/b.ts")
+
+    local tabs_before = #vim.api.nvim_list_tabpages()
+    local notified = {}
+    local real_notify = vim.notify
+    vim.notify = function(msg)
+      table.insert(notified, msg)
+    end
+    actions._open_clone_diff(group.locations)
+    vim.notify = real_notify
+
+    eq("diff: new tab", #vim.api.nvim_list_tabpages(), tabs_before + 1)
+    local wins = vim.api.nvim_tabpage_list_wins(0)
+    eq("diff: two windows", #wins, 2)
+    local diffs, names = 0, {}
+    for _, win in ipairs(wins) do
+      if vim.wo[win].diff then
+        diffs = diffs + 1
+      end
+      table.insert(names, vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)))
+      eq("diff: cursor at instance start", vim.api.nvim_win_get_cursor(win)[1], 1)
+    end
+    eq("diff: both in diff mode", diffs, 2)
+    ok("diff: two different files", names[1] ~= names[2], vim.inspect(names))
+    ok("diff: extra instance named", (notified[1] or ""):match("1 more instance") ~= nil, vim.inspect(notified))
+
+    vim.cmd("tabclose")
+    vim.cmd("cd " .. fixture)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

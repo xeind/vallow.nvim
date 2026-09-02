@@ -109,6 +109,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `x` | Ignore this finding: `.fallowrc.json` entry or suppression comment |
 | `ge` | Explain this issue type (`fallow explain`) |
 | `gt` | Trace an unused export or dependency |
+| `d` | Diff the two largest instances of a clone group |
 | `D` | Health dashboard float |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window |
