@@ -222,6 +222,18 @@ vim.o.statusline = "%{%v:lua.require('vallow').statusline()%}"
 
 Shows `vallow 42` when issues exist, `vallow ✓` when clean, empty when not run.
 
+### Lualine component
+
+```lua
+require("lualine").setup({
+  sections = { lualine_x = { require("vallow").lualine() } },
+})
+```
+
+Shows `vallow E:2 W:5 H:40`, coloured per severity with `VallowSevError`,
+`VallowSevWarn`, and `VallowSevHint`. A spinner runs while fallow does,
+`vallow ✓` means no findings, and `vallow !` means fallow failed.
+
 ### File explorers
 
 Files fallow reports as unused are greyed out with `VallowUnusedFile` (linked to

@@ -814,6 +814,41 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 19. Lualine component: per-severity counts, spinner, clean mark.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local panel = require("vallow.panel")
+  local saved = panel.state.results
+  local comp = require("vallow").lualine()
+  ok("lualine: component is a table with a function", type(comp) == "table" and type(comp[1]) == "function")
+
+  panel.state.results = nil
+  eq("lualine: no results", comp[1](), "")
+
+  panel.state.results = { _loading = true }
+  ok("lualine: spinner while loading", comp[1]():match("^vallow .") ~= nil, comp[1]())
+
+  panel.state.results = { findings = {} }
+  eq("lualine: clean", comp[1](), "vallow ✓")
+
+  panel.state.results = {
+    findings = {
+      unresolved_imports = { count = 1, items = {} }, -- error
+      unlisted_deps = { count = 2, items = {} }, -- warn
+      unused_exports = { count = 3, items = {} }, -- hint
+      unused_deps = { count = 4, items = {} }, -- hint, via sources
+    },
+  }
+  local status = comp[1]()
+  eq("lualine: counts", status, "vallow %#VallowSevError#E:1%* %#VallowSevWarn#W:2%* %#VallowSevHint#H:7%*")
+
+  panel.state.results = { error = "boom" }
+  eq("lualine: error", comp[1](), "vallow %#VallowSevError#!%*")
+
+  panel.state.results = saved
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

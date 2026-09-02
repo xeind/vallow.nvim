@@ -653,6 +653,20 @@ vallow.focus()
       end)
 <
 
+                                                        *vallow.lualine()*
+vallow.lualine()
+    Returns a lualine component table with per-severity counts. >lua
+
+      require("lualine").setup({
+        sections = { lualine_x = { require("vallow").lualine() } },
+      })
+<
+    It renders "vallow E:2 W:5 H:40", each part in VallowSevError,
+    VallowSevWarn, or VallowSevHint. A spinner runs while fallow does,
+    "vallow ✓" means no findings, "vallow !" means fallow failed, and the
+    component is empty before the first run. Severity per category comes
+    from the categories table, see |vallow-config|.
+
                                                        *vallow.prefetch()*
 vallow.prefetch()
     Run fallow in the background without opening the panel. Called

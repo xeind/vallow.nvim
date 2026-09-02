@@ -122,6 +122,12 @@ M.statusline = function()
   return prefix .. (total > 0 and tostring(total) or "✓")
 end
 
+-- Returns a lualine component with per-severity counts:
+--   sections = { lualine_x = { require("vallow").lualine() } }
+M.lualine = function()
+  return require("vallow.lualine").component()
+end
+
 -- Export current findings as markdown into a new scratch buffer.
 M.export = function()
   local state = require("vallow.panel").state
