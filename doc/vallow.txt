@@ -163,6 +163,14 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     -- See |vallow-cli-flags| for useful values.
     fallow_args = {},
 
+    -- Kill fallow after this many milliseconds. The type-aware pass alone
+    -- has a 120 s ceiling, so raise this on large projects.
+    timeout_ms = 60000,
+
+    -- Extra environment variables for every fallow invocation.
+    -- e.g. { FALLOW_TYPE_AWARE_TIMEOUT_SECS = "300" }
+    env = {},
+
     -- Which analyses to run. Remove entries to disable entire sections.
     --   "dead-code"  →  Unused Code + Issues + Architecture sections
     --   "dupes"      →  Duplicates section

@@ -16,7 +16,12 @@ function M.check()
   local cmd = cfg.fallow_cmd
   if vim.fn.executable(cmd) == 1 then
     local version = vim.fn.system(cmd .. " --version 2>&1"):gsub("\n", "")
-    vim.health.ok(("fallow: %s"):format(version))
+    local major, minor = version:match("(%d+)%.(%d+)%.%d+")
+    if major and (tonumber(major) < 3 or (tonumber(major) == 3 and tonumber(minor) < 21)) then
+      vim.health.warn(("fallow: %s — 3.21+ recommended (workspace and type-aware notices)"):format(version))
+    else
+      vim.health.ok(("fallow: %s"):format(version))
+    end
   else
     vim.health.error(("fallow not found (%q) — install with: npm i -g fallow"):format(cmd))
   end

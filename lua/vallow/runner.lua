@@ -63,12 +63,13 @@ M.run = function(callback)
     table.insert(cmd, a)
   end
 
-  local timeout_ms = 60000 -- 60 s hard limit
+  local timeout_ms = cfg.timeout_ms or 60000
   local timer = vim.uv.new_timer()
   local done = false
 
   local job_id = vim.fn.jobstart(cmd, {
     cwd = root,
+    env = next(cfg.env or {}) and cfg.env or nil,
     on_stdout = function(_, data)
       for _, l in ipairs(data) do
         if l ~= "" then
@@ -95,21 +96,14 @@ M.run = function(callback)
           return
         end
         local raw = table.concat(stdout, "")
-        if code ~= 0 then
-          if raw == "" then
-            M._run_separate(gen, root, cfg, callback)
-          else
-            -- Prefer stderr; fall back to first 200 chars of stdout if stderr is empty
-            local err = table.concat(stderr, "\n")
-            if err == "" then
-              err = raw:sub(1, 200)
-            end
-            callback({ error = err, findings = M._empty_findings() })
-          end
-          return
-        end
         if raw == "" then
           M._run_separate(gen, root, cfg, callback)
+          return
+        end
+        -- Exit 1 means error-severity findings were reported; the JSON is still complete.
+        -- Exit 2+ is a validation or runtime failure.
+        if code > 1 then
+          callback({ error = M._error_message(code, raw, stderr), findings = M._empty_findings() })
           return
         end
         local ok, decoded = pcall(vim.fn.json_decode, raw)
@@ -142,7 +136,10 @@ M.run = function(callback)
       if gen ~= _gen then
         return
       end
-      callback({ error = "vallow: fallow timed out after 60s", findings = M._empty_findings() })
+      callback({
+        error = ("vallow: fallow timed out after %ds"):format(timeout_ms / 1000),
+        findings = M._empty_findings(),
+      })
     end)
   end)
 end
@@ -197,14 +194,33 @@ M._run_separate = function(gen, root, cfg, callback)
   end
 end
 
+-- Best error text for a failed run: stderr, else the `message` of fallow's
+-- JSON error envelope ({"error":true,"message":...}), else the raw stdout head.
+M._error_message = function(code, raw, stderr)
+  local err = table.concat(stderr, "\n")
+  if err ~= "" then
+    return err
+  end
+  local ok, decoded = pcall(vim.fn.json_decode, raw)
+  if ok and type(decoded) == "table" and decoded.message then
+    return decoded.message
+  end
+  if raw ~= "" then
+    return raw:sub(1, 200)
+  end
+  return ("fallow exited with code %d"):format(code)
+end
+
 M._job = function(cmd, cwd, callback)
+  local cfg = require("vallow.config").get()
   local stdout, stderr = {}, {}
-  local timeout_ms = 60000
+  local timeout_ms = cfg.timeout_ms or 60000
   local timer = vim.uv.new_timer()
   local done = false
 
   local job_id = vim.fn.jobstart(cmd, {
     cwd = cwd,
+    env = next(cfg.env or {}) and cfg.env or nil,
     on_stdout = function(_, data)
       for _, l in ipairs(data) do
         if l ~= "" then
@@ -227,8 +243,9 @@ M._job = function(cmd, cwd, callback)
       timer:stop()
       timer:close()
       local raw = table.concat(stdout, "")
-      if code ~= 0 or raw == "" then
-        callback(false, table.concat(stderr, "\n"))
+      -- Exit 1 = error-severity findings present, JSON still complete. Exit 2+ = failure.
+      if code > 1 or raw == "" then
+        callback(false, M._error_message(code, raw, stderr))
         return
       end
       local ok, decoded = pcall(vim.fn.json_decode, raw)
@@ -249,7 +266,7 @@ M._job = function(cmd, cwd, callback)
     done = true
     timer:close()
     pcall(vim.fn.jobstop, job_id)
-    callback(false, "timed out after 60s")
+    callback(false, ("timed out after %ds"):format(timeout_ms / 1000))
   end)
 end
 
@@ -612,7 +629,36 @@ M._normalize = function(raw, root)
     table.sort(findings[key].items, by_file_line)
   end
 
-  return { repo_root = root, duration_ms = elapsed, findings = findings, error = nil }
+  -- fallow version: top-level in combined output, per-envelope in separate mode
+  local version = raw.version or check.version or dupes_raw.version or health_raw.version
+
+  -- Notices: workspace_diagnostics[] (v3.21+, e.g. a skipped hidden source dir) and
+  -- _meta.type_aware.warnings[] (v3.22+, e.g. semantic pass timed out). Advisory only.
+  local notices, seen = {}, {}
+  local function notice(text)
+    if text and text ~= "" and not seen[text] then
+      seen[text] = true
+      table.insert(notices, text)
+    end
+  end
+  for _, env in ipairs({ raw, check, dupes_raw, health_raw }) do
+    for _, d in ipairs(env.workspace_diagnostics or {}) do
+      notice(d.message or ((d.kind or "diagnostic") .. ": " .. (d.path or "")))
+    end
+    local ta = env._meta and env._meta.type_aware
+    for _, w in ipairs(ta and ta.warnings or {}) do
+      notice("type-aware: " .. tostring(w))
+    end
+  end
+
+  return {
+    repo_root = root,
+    duration_ms = elapsed,
+    findings = findings,
+    version = version,
+    notices = notices,
+    error = nil,
+  }
 end
 
 M._merge_separate = function(raw, root)

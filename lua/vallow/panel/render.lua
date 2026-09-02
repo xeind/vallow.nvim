@@ -18,6 +18,26 @@ end
 -- Module-level store: avoids vim.b integer-key roundtrip bug
 local _line_maps = {}
 
+-- Greedy word wrap; returns a list of lines no wider than `width`.
+M._wrap = function(text, width)
+  width = math.max(width, 20)
+  local out, cur = {}, ""
+  for word in text:gmatch("%S+") do
+    if cur == "" then
+      cur = word
+    elseif vim.fn.strdisplaywidth(cur .. " " .. word) <= width then
+      cur = cur .. " " .. word
+    else
+      table.insert(out, cur)
+      cur = word
+    end
+  end
+  if cur ~= "" then
+    table.insert(out, cur)
+  end
+  return out
+end
+
 M.get_line_map = function(buf)
   return _line_maps[buf] or {}
 end
@@ -66,10 +86,28 @@ M.render = function(buf, results, win)
   end
 
   if results.error and results.error ~= "" then
-    push("  Error: " .. tostring(results.error), 2, -1, "VallowError")
+    -- nvim_buf_set_lines rejects embedded newlines; fallow usage errors span lines.
+    local first = true
+    for _, l in ipairs(vim.split(tostring(results.error), "\n", { plain = true })) do
+      push((first and "  Error: " or "         ") .. l, 2, -1, "VallowError")
+      first = false
+    end
     M._flush(buf, lines, hl_queue)
     _line_maps[buf] = line_map
     return
+  end
+
+  -- ── Run info + notices ──────────────────────────────────────────────
+  if results.version then
+    push(string.format("  fallow %s · %dms", results.version, results.duration_ms or 0), 2, -1, "VallowFooter")
+  end
+  for _, text in ipairs(results.notices or {}) do
+    -- Panel has nowrap, so wrap long advisory messages by hand.
+    local first = true
+    for _, seg in ipairs(M._wrap(text, win_width - 4)) do
+      push((first and "  ⚠ " or "    ") .. seg, 2, -1, "VallowSevWarn")
+      first = false
+    end
   end
 
   -- ── Active filter ───────────────────────────────────────────────────

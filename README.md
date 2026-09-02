@@ -103,6 +103,8 @@ Severity is color-coded: errors red, warnings yellow, hints grey.
 require("vallow").setup({
   fallow_cmd  = "fallow",
   fallow_args = {},  -- extra CLI flags forwarded verbatim
+  timeout_ms  = 60000,  -- kill fallow after this long (type-aware pass can take 120 s)
+  env         = {},  -- extra env for fallow, e.g. { FALLOW_TYPE_AWARE_TIMEOUT_SECS = "300" }
 
   -- Which analyses to run. Remove entries to skip them entirely.
   analyses = { "dead-code", "dupes", "health" },

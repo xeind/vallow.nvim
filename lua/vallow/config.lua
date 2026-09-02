@@ -3,6 +3,8 @@ local M = {}
 M.defaults = {
   fallow_cmd = "fallow",
   fallow_args = {}, -- extra CLI args forwarded verbatim
+  timeout_ms = 60000, -- kill fallow after this long; the type-aware pass alone may take 120 s
+  env = {}, -- extra environment for fallow, e.g. { FALLOW_TYPE_AWARE_TIMEOUT_SECS = "300" }
 
   -- Which analyses to run. Remove entries to skip them entirely.
   -- "health" automatically adds --score --hotspots --targets to fallow.
