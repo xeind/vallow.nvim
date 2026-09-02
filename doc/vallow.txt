@@ -692,6 +692,22 @@ JavaScript/TypeScript project directory.
 ==============================================================================
 12. INTEGRATIONS                                      *vallow-integrations*
 
+PICKERS ~
+
+Telescope: load the extension, then use :Telescope vallow >lua
+  require("telescope").load_extension("vallow")
+<
+snacks.nvim: the source registers itself when snacks is loaded. >lua
+  Snacks.picker.vallow()   -- or Snacks.picker("vallow")
+<
+If you load snacks after |vallow.setup()|, register it yourself: >lua
+  require("vallow.picker").register_snacks()
+<
+Both list every finding with its category, path:line, and name, and
+preview the file at the finding line. |:VallowSearch| and the panel "gf"
+keymap are unchanged: they pick snacks, telescope, fzf-lua, or
+vim.ui.select, whichever is installed.
+
 FILE EXPLORERS ~
 
 Files fallow reports as unused are drawn with the highlight group

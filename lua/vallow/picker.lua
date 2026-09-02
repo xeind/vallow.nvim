@@ -88,7 +88,7 @@ local function jump(entry)
 end
 
 -- ── Telescope ────────────────────────────────────────────────────────
-local function open_telescope(entries)
+local function open_telescope(entries, opts)
   local pickers = require("telescope.pickers")
   local finders = require("telescope.finders")
   local conf = require("telescope.config").values
@@ -96,7 +96,7 @@ local function open_telescope(entries)
   local action_state = require("telescope.actions.state")
 
   pickers
-    .new({}, {
+    .new(opts or {}, {
       prompt_title = "Vallow Findings",
       previewer = conf.file_previewer({}),
       finder = finders.new_table({
@@ -196,6 +196,63 @@ local function open_select(entries)
       jump(e)
     end
   end)
+end
+
+-- ── Extensions ───────────────────────────────────────────────────────
+-- The findings of the last run, flattened. Used by the telescope extension
+-- and the snacks source, which are entered from outside this module.
+M.entries = function(results)
+  return flatten(results or require("vallow.panel").state.results)
+end
+
+-- Body of the telescope extension in lua/telescope/_extensions/vallow.lua:
+--   :Telescope vallow  /  require("telescope").extensions.vallow.vallow()
+M.open_telescope = function(opts)
+  local entries = M.entries()
+  if #entries == 0 then
+    vim.notify("vallow: no findings to search", vim.log.levels.INFO)
+    return
+  end
+  open_telescope(entries, opts)
+end
+
+-- Snacks picker source, registered as "vallow": Snacks.picker.vallow().
+M.snacks_source = function()
+  return {
+    title = "Vallow Findings",
+    format = "text",
+    preview = "file",
+    finder = function()
+      local items = {}
+      for i, e in ipairs(M.entries()) do
+        items[i] = {
+          idx = i,
+          text = e.display,
+          file = e.path,
+          pos = { e.lnum or 1, (e.col or 0) + 1 },
+          _e = e,
+        }
+      end
+      return items
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if item then
+        jump(item._e)
+      end
+    end,
+  }
+end
+
+-- Register the snacks source. Returns false when snacks is not loaded; call
+-- it again yourself if you load snacks after vallow.setup().
+M.register_snacks = function()
+  local ok_snacks, snacks = pcall(require, "snacks")
+  if not ok_snacks or not snacks.picker or not snacks.picker.sources then
+    return false
+  end
+  snacks.picker.sources.vallow = M.snacks_source()
+  return true
 end
 
 -- ── Public entry point ───────────────────────────────────────────────

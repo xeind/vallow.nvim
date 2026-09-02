@@ -849,6 +849,95 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 20. Picker extensions: telescope "vallow" and the snacks source.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local panel = require("vallow.panel")
+  require("vallow.runner").run(function(results)
+    panel.state.results = results
+
+    local entries = require("vallow.picker").entries()
+    ok("picker: entries built", #entries > 0)
+    ok("picker: entry has a path", (entries[1].path or ""):sub(1, 1) == "/", vim.inspect(entries[1]))
+
+    -- Telescope: fake just enough of the API to capture the picker options.
+    local captured
+    package.preload["telescope"] = function()
+      return {
+        register_extension = function(ext)
+          return ext
+        end,
+      }
+    end
+    package.preload["telescope.pickers"] = function()
+      return {
+        new = function(opts, spec)
+          captured = { opts = opts, spec = spec }
+          return { find = function() end }
+        end,
+      }
+    end
+    package.preload["telescope.finders"] = function()
+      return {
+        new_table = function(t)
+          return t
+        end,
+      }
+    end
+    package.preload["telescope.config"] = function()
+      return {
+        values = {
+          file_previewer = function() end,
+          generic_sorter = function() end,
+        },
+      }
+    end
+    package.preload["telescope.actions"] = function()
+      return { select_default = { replace = function() end }, close = function() end }
+    end
+    package.preload["telescope.actions.state"] = function()
+      return { get_selected_entry = function() end }
+    end
+
+    local ext = require("telescope._extensions.vallow")
+    ok("telescope: extension exports vallow", type(ext.exports.vallow) == "function")
+    ext.exports.vallow({ prompt_prefix = "> " })
+    eq("telescope: title", captured and captured.spec.prompt_title, "Vallow Findings")
+    eq("telescope: opts forwarded", captured and captured.opts.prompt_prefix, "> ")
+    local made = captured.spec.finder.entry_maker(captured.spec.finder.results[1])
+    eq("telescope: preview filename", made.filename, entries[1].path)
+    eq("telescope: preview line", made.lnum, entries[1].lnum)
+
+    -- Snacks: a source registered under Snacks.picker.sources.vallow.
+    package.preload["snacks"] = function()
+      return { picker = { sources = {} } }
+    end
+    ok("snacks: source registered", require("vallow.picker").register_snacks())
+    local source = require("snacks").picker.sources.vallow
+    eq("snacks: source title", source.title, "Vallow Findings")
+    eq("snacks: preview", source.preview, "file")
+    local items = source.finder()
+    eq("snacks: item count", #items, #entries)
+    eq("snacks: item file", items[1].file, entries[1].path)
+    eq("snacks: item line", items[1].pos[1], entries[1].lnum)
+
+    for _, mod in ipairs({
+      "telescope",
+      "telescope.pickers",
+      "telescope.finders",
+      "telescope.config",
+      "telescope.actions",
+      "telescope.actions.state",
+      "telescope._extensions.vallow",
+      "snacks",
+    }) do
+      package.preload[mod] = nil
+      package.loaded[mod] = nil
+    end
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

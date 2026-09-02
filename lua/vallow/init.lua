@@ -3,6 +3,22 @@ local M = {}
 M.setup = function(opts)
   require("vallow.config").setup(opts)
   require("vallow.panel.highlights").setup()
+
+  -- Register the snacks picker source once snacks itself is loaded. Requiring
+  -- it here would force-load a plugin the user may have set to load lazily.
+  if package.loaded["snacks"] then
+    require("vallow.picker").register_snacks()
+  else
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "VeryLazy",
+      once = true,
+      callback = function()
+        if package.loaded["snacks"] then
+          require("vallow.picker").register_snacks()
+        end
+      end,
+    })
+  end
 end
 
 M.open = function()

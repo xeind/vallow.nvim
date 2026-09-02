@@ -234,6 +234,22 @@ Shows `vallow E:2 W:5 H:40`, coloured per severity with `VallowSevError`,
 `VallowSevWarn`, and `VallowSevHint`. A spinner runs while fallow does,
 `vallow ✓` means no findings, and `vallow !` means fallow failed.
 
+### Picker extensions
+
+```lua
+-- telescope
+require("telescope").load_extension("vallow")   -- then :Telescope vallow
+
+-- snacks
+Snacks.picker.vallow()                          -- or Snacks.picker("vallow")
+```
+
+Both list every finding with its category, `path:line`, and name, and preview
+the file at the finding line. The snacks source registers itself when snacks is
+loaded; if you load snacks later, call
+`require("vallow.picker").register_snacks()` yourself. `:VallowSearch` and `gf`
+keep working with snacks, telescope, fzf-lua, or `vim.ui.select`.
+
 ### File explorers
 
 Files fallow reports as unused are greyed out with `VallowUnusedFile` (linked to
