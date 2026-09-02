@@ -25,8 +25,13 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   { enabled, severity } }`, `diagnostics.virtual_text`, and
   `diagnostics.current_buffer_only`.
 
-## Batch 2 — workflows
+## Batch 2 — done
 
+- **Installer and binary resolution.** `runner.resolve_cmd` picks the fallow
+  binary: configured command, `node_modules/.bin`, PATH, then the copy under
+  `stdpath("data")`. `:VallowInstall [lsp] [version]` and `:VallowUpdate`
+  download the standalone release asset with curl. Signatures are not
+  verified. `:checkhealth vallow` names the source and warns below 3.22.0.
 - **Audit mode.** `:Vallow audit [ref]` runs `fallow audit --base <ref>
   --format json`. Panel shows only changed files; `introduced` findings get
   a marker and a toggle hides inherited ones. Header names the base ref.
@@ -37,8 +42,9 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   `ignoreFindings` / `ignoreExports` in `.fallowrc.json`, or insert the
   suppression comment fallow documents. Confirm before writing. A
   `stale_suppressions` category lists suppressions that no longer fire.
-- **Explain.** `?` on a category header, and a line in the K detail float,
-  show `fallow explain <issue-type>` output, cached per type.
+- **Explain.** `ge` on a category header or finding, and a paragraph in the
+  K detail float, show `fallow explain <issue-type>` output, cached per type
+  (`?` stays the keymap help).
 - **Trace.** `gt` on an unused export or dependency runs `--trace` /
   `--trace-dependency` and renders the evidence as an indented tree.
 
