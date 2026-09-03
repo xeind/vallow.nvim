@@ -126,17 +126,41 @@ local function open_telescope(entries, opts)
 end
 
 -- ── fzf-lua ──────────────────────────────────────────────────────────
-local function open_fzf(entries)
-  local fzf = require("fzf-lua")
-
-  -- Format: "abs_path:lnum:col: display_text"
-  -- fzf-lua's builtin previewer recognises this grep-output format and opens
-  -- the file at the correct line. --with-nth hides the path prefix from the
-  -- visible list while the previewer still reads the full original string.
-  local items = {}
+-- Format: "abs_path:lnum:col: display_text"
+-- fzf-lua's builtin previewer recognises this grep-output format and opens
+-- the file at the correct line. --with-nth hides the path prefix from the
+-- visible list while the previewer still reads the full original string.
+-- Returns the item strings and a lookup from item string back to the entry.
+M._fzf_items = function(entries)
+  local items, lookup = {}, {}
   for i, e in ipairs(entries) do
     items[i] = string.format("%s:%d:%d: %s", e.path or "", e.lnum or 1, (e.col or 0) + 1, e.display)
+    lookup[items[i]] = e
   end
+  return items, lookup
+end
+
+-- The entry fzf selected. The lookup answers it whole, so a path with a colon
+-- in it survives; the pattern is only a fallback, and it matches the line
+-- number from the right for the same reason.
+M._fzf_entry = function(selected, lookup)
+  if type(selected) ~= "string" then
+    return nil
+  end
+  local entry = lookup[selected]
+  if entry then
+    return entry
+  end
+  local path, lnum, col = selected:match("^(.*):(%d+):(%d+): ")
+  if not path or path == "" then
+    return nil
+  end
+  return { path = path, lnum = tonumber(lnum) or 1, col = math.max(0, (tonumber(col) or 1) - 1) }
+end
+
+local function open_fzf(entries)
+  local fzf = require("fzf-lua")
+  local items, lookup = M._fzf_items(entries)
 
   fzf.fzf_exec(items, {
     prompt = "Vallow> ",
@@ -150,11 +174,7 @@ local function open_fzf(entries)
         if not selected or not selected[1] then
           return
         end
-        -- fzf returns the original full string; parse path and lnum back out
-        local path, lnum_s = selected[1]:match("^([^:]+):(%d+):%d+:")
-        if path then
-          jump({ path = path, lnum = tonumber(lnum_s) or 1 })
-        end
+        jump(M._fzf_entry(selected[1], lookup))
       end,
     },
   })

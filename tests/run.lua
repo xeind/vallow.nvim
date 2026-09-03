@@ -1164,6 +1164,32 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 26. fzf-lua entries: a colon in the path must not break the selection.
+table.insert(steps, function(next_step)
+  local picker = require("vallow.picker")
+  local entries = {
+    { path = "/tmp/we:ird/src/a.ts", lnum = 7, col = 2, display = "Unused Exports  we:ird/src/a.ts:7  unusedFn" },
+    { path = "/tmp/plain/src/b.ts", lnum = 1, col = 0, display = "Unused Types  plain/src/b.ts:1  Weird" },
+  }
+  local items, lookup = picker._fzf_items(entries)
+  eq("fzf: item count", #items, 2)
+  ok("fzf: grep format", items[1]:find("/tmp/we:ird/src/a.ts:7:3: ", 1, true) == 1, items[1])
+
+  local picked = picker._fzf_entry(items[1], lookup)
+  eq("fzf: colon path resolves", picked and picked.path, entries[1].path)
+  eq("fzf: colon path line", picked and picked.lnum, 7)
+  eq("fzf: plain path resolves", picker._fzf_entry(items[2], lookup).path, entries[2].path)
+
+  -- Fallback for a string fzf handed back changed: match from the right.
+  local fallback = picker._fzf_entry("/tmp/we:ird/src/a.ts:7:3: Unused Exports", {})
+  eq("fzf: fallback path", fallback and fallback.path, "/tmp/we:ird/src/a.ts")
+  eq("fzf: fallback line", fallback and fallback.lnum, 7)
+  eq("fzf: fallback col", fallback and fallback.col, 2)
+  eq("fzf: junk selection", picker._fzf_entry("nonsense", {}), nil)
+  eq("fzf: nil selection", picker._fzf_entry(nil, {}), nil)
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
