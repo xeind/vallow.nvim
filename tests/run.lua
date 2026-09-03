@@ -1096,6 +1096,38 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 24. Cancel and debounce: a new run stops the old job and drops its output.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local runner = require("vallow.runner")
+  local panel = require("vallow.panel")
+
+  eq("cancel: debounce is 300ms", panel._debounce_ms, 300)
+  -- Cancelling a pending debounce timer twice must not error.
+  panel._cancel_timer()
+  panel._cancel_timer()
+  ok("cancel: timer cancel is safe", true)
+
+  local first, second = 0, 0
+  runner.run(function()
+    first = first + 1
+  end)
+  ok("cancel: job tracked", runner._job_count() > 0)
+  runner.run(function()
+    second = second + 1
+  end)
+  vim.wait(30000, function()
+    return second > 0
+  end, 50)
+  eq("cancel: second run delivers", second, 1)
+  -- Give the stopped run every chance to call back late.
+  vim.wait(1000, function()
+    return first > 0
+  end, 50)
+  eq("cancel: first run dropped", first, 0)
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

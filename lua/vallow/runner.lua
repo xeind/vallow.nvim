@@ -2,6 +2,30 @@
 local M = {}
 
 local _gen = 0
+-- Job ids of the analysis run in flight. A new run stops them: their output
+-- would be dropped by the generation guard anyway, and two fallow processes
+-- over one project root only slow each other down.
+local _jobs = {}
+
+local function _new_gen()
+  for _, id in ipairs(_jobs) do
+    pcall(vim.fn.jobstop, id)
+  end
+  _jobs = {}
+  _gen = _gen + 1
+  return _gen
+end
+
+local function _track(id)
+  if id and id > 0 then
+    table.insert(_jobs, id)
+  end
+end
+
+-- Number of analysis jobs in flight. Used by the tests.
+M._job_count = function()
+  return #_jobs
+end
 
 -- Returns the project root, or nil if not a JS/TS project.
 -- Searches upward from cwd first, then from the current buffer's path as a fallback.
@@ -66,8 +90,7 @@ M.resolve_cmd = function(root)
 end
 
 M.run = function(callback)
-  _gen = _gen + 1
-  local gen = _gen
+  local gen = _new_gen()
   -- Every successful run refreshes the on-disk cache read on the next open.
   local user_callback = callback
   callback = function(results)
@@ -160,6 +183,7 @@ M.run = function(callback)
       end)
     end,
   })
+  _track(job_id)
   if job_id == -1 then
     timer:stop()
     timer:close()
@@ -248,7 +272,7 @@ M._run_separate = function(gen, root, cfg, callback)
   end
 
   for _, job in ipairs(jobs) do
-    M._job(job.cmd, root, collect(job.key))
+    _track(M._job(job.cmd, root, collect(job.key)))
   end
 end
 
@@ -314,7 +338,7 @@ M._job = function(cmd, cwd, callback)
     timer:stop()
     timer:close()
     callback(false, "failed to start: " .. table.concat(cmd, " "))
-    return
+    return job_id
   end
 
   timer:start(timeout_ms, 0, function()
@@ -326,6 +350,7 @@ M._job = function(cmd, cwd, callback)
     pcall(vim.fn.jobstop, job_id)
     callback(false, ("timed out after %ds"):format(timeout_ms / 1000))
   end)
+  return job_id
 end
 
 -- Normalize fallow JSON → output contract.
@@ -790,8 +815,7 @@ end
 -- `fallow audit --base <ref>`: dead code, complexity, duplication and styling
 -- scoped to the files changed since <ref>.
 M.run_audit = function(ref, callback)
-  _gen = _gen + 1
-  local gen = _gen
+  local gen = _new_gen()
   local cfg = require("vallow.config").get()
   local root = M.find_root()
   if not root then
@@ -809,7 +833,7 @@ M.run_audit = function(ref, callback)
     table.insert(cmd, a)
   end
 
-  M._job(cmd, root, function(ok, data)
+  _track(M._job(cmd, root, function(ok, data)
     vim.schedule(function()
       if gen ~= _gen then
         return
@@ -824,7 +848,7 @@ M.run_audit = function(ref, callback)
       end
       callback(M._normalize_audit(data, root, base))
     end)
-  end)
+  end))
 end
 
 -- The audit envelope carries the same sub-analyses as combined mode, except

@@ -158,7 +158,7 @@ require("vallow").setup({
 
   max_items = 30,  -- items per category before "N more..." expands
   manifest_overlay = true,  -- virtual text per dependency line in package.json
-  auto_refresh = false,  -- re-run fallow silently on every JS/TS file save
+  auto_refresh = false,  -- re-run fallow silently 300 ms after a JS/TS file save
   watch = { enabled = false },  -- one long-lived `fallow watch` streaming results instead
   cache = true,  -- reopen with the last run's results, marked (stale), while fallow re-runs
 

@@ -16,6 +16,17 @@ M.state = {
 
 -- Debounce timer for auto-refresh
 local _refresh_timer = nil
+M._debounce_ms = 300
+
+-- Drop a pending debounced refresh. Every path that starts a run calls this,
+-- so a queued auto-refresh never lands on top of a run already going.
+M._cancel_timer = function()
+  if _refresh_timer then
+    _refresh_timer:stop()
+    _refresh_timer:close()
+    _refresh_timer = nil
+  end
+end
 
 local function _count_total(results)
   if not results or not results.findings then
@@ -80,18 +91,14 @@ M.open = function()
         end
       end
       -- Debounce: cancel any pending refresh before starting a new one
-      if _refresh_timer then
-        _refresh_timer:stop()
-        _refresh_timer:close()
-        _refresh_timer = nil
-      end
+      M._cancel_timer()
       _refresh_timer = vim.uv.new_timer()
       _refresh_timer:start(
-        500,
+        M._debounce_ms,
         0,
+        -- _bg_refresh closes the timer; doing it here too would fail once the
+        -- callback is already queued when something else cancels.
         vim.schedule_wrap(function()
-          _refresh_timer:close()
-          _refresh_timer = nil
           M._bg_refresh()
         end)
       )
@@ -184,6 +191,9 @@ M.refresh = function()
   if not M._is_open() then
     return
   end
+  -- An explicit refresh wins: a debounced auto-refresh queued behind it would
+  -- otherwise stop this run halfway and leave the panel on its loading state.
+  M._cancel_timer()
 
   local render = require("vallow.panel.render")
 
@@ -247,11 +257,7 @@ M._bg_refresh = function()
     return
   end
   -- Cancel pending debounce timer if called directly (e.g. stale-while-revalidate on open)
-  if _refresh_timer then
-    _refresh_timer:stop()
-    _refresh_timer:close()
-    _refresh_timer = nil
-  end
+  M._cancel_timer()
   local old_total = _count_total(M.state.results)
   require("vallow.runner").run(function(results)
     local new_total = _count_total(results)

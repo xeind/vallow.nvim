@@ -322,9 +322,10 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
       size     = 0.5,       -- fraction of the editor (0.1 – 0.9)
     },
 
-    -- Silently re-run fallow N ms after saving a JS/TS/package.json file.
-    -- Only fires for files inside the detected project root.
-    -- false = disabled (default).
+    -- Silently re-run fallow 300 ms after saving a JS/TS/package.json
+    -- file. Only fires for files inside the detected project root, and
+    -- not while watch mode runs. A new run stops the fallow process of
+    -- the previous one. false = disabled (default).
     auto_refresh = false,
 
     -- Watch mode: keep one `fallow watch` per project root and take its
