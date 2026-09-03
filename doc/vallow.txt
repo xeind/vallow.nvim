@@ -277,10 +277,12 @@ ACTIONS ~
             suppression comment fallow suggests for it. Every choice asks
             for confirmation first, and the panel refreshes afterwards.
 
-            The config file is read with vim.json.decode and written back
-            with 2-space indent and sorted keys, so an existing file keeps
-            its content but not its key order. Comments in a .fallowrc
-            file are not preserved.
+            An existing config is edited as text: the new entry goes last
+            into the array it belongs to, or into a new key at the end of
+            the object. Key order, formatting and the comments of a
+            .fallowrc.jsonc file all survive. .fallowrc.jsonc is used when
+            it exists, .fallowrc.json otherwise; a config that does not
+            exist yet is written with 2-space indent.
   >         Widen the panel by 5 columns (vertical split) or 5 rows.
   <         Narrow the panel by 5 columns or rows.
   <2-LeftMouse>

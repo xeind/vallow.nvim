@@ -108,7 +108,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `%` | Filter findings to the file under cursor |
 | `i` | Audit mode: hide findings the change inherited |
 | `gi` | Inspect the file on this row |
-| `x` | Ignore this finding: `.fallowrc.json` entry or suppression comment |
+| `x` | Ignore this finding: `.fallowrc.json`/`.fallowrc.jsonc` entry or suppression comment |
 | `ge` | Explain this issue type (`fallow explain`) |
 | `gt` | Trace an unused export or dependency |
 | `d` | Diff the two largest instances of a clone group |

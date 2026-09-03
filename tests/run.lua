@@ -1190,6 +1190,75 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 27. Ignore writes: key order kept, JSONC comments kept.
+table.insert(steps, function(next_step)
+  local ignore = require("vallow.ignore")
+  local real_confirm = vim.fn.confirm
+  vim.fn.confirm = function()
+    return 1
+  end
+
+  -- Plain JSON: the entry lands in the array, every other key stays put.
+  local root = vim.fn.tempname()
+  vim.fn.mkdir(root, "p")
+  local plain = root .. "/.fallowrc.json"
+  vim.fn.writefile({
+    "{",
+    '  "$schema": "https://example.com/schema.json",',
+    '  "entry": ["src/index.ts"],',
+    '  "ignoreFindings": ["dist/**"],',
+    '  "rules": { "unused-export": "error" }',
+    "}",
+  }, plain)
+  ok("ignore: add_finding to plain json", ignore.add_finding(root, "src/a.ts"))
+  local text = table.concat(vim.fn.readfile(plain), "\n")
+  ok("ignore: key order kept", text:find('"%$schema".*"entry".*"ignoreFindings".*"rules"') ~= nil, text)
+  ok("ignore: existing member kept", text:find('"dist/%*%*"') ~= nil, text)
+  ok("ignore: new member added", text:find('"src/a%.ts"') ~= nil, text)
+  ok("ignore: still parses", ignore.read(plain) ~= nil)
+  -- Adding the same glob twice leaves one entry.
+  ignore.add_finding(root, "src/a.ts")
+  local again = table.concat(vim.fn.readfile(plain), "\n")
+  eq("ignore: no duplicate", select(2, again:gsub('"src/a%.ts"', "")), 1)
+
+  -- JSONC: comments and trailing key order survive, and a missing key is added.
+  local jroot = vim.fn.tempname()
+  vim.fn.mkdir(jroot, "p")
+  local jsonc = jroot .. "/.fallowrc.jsonc"
+  vim.fn.writefile({
+    "{",
+    "  // entry points of the app",
+    '  "entry": ["src/index.ts"], // the only one',
+    '  "ignoreExports": [',
+    '    { "file": "src/a.ts", "exports": ["keepMe"] }',
+    "  ]",
+    "}",
+  }, jsonc)
+  eq("ignore: jsonc config wins", ignore.config_path(jroot), jsonc)
+  ok("ignore: add_export to jsonc", ignore.add_export(jroot, "src/a.ts", "unusedFn"))
+  ok("ignore: add_finding creates key", ignore.add_finding(jroot, "dist/**"))
+  local jtext = table.concat(vim.fn.readfile(jsonc), "\n")
+  ok("ignore: line comment kept", jtext:find("// entry points of the app", 1, true) ~= nil, jtext)
+  ok("ignore: trailing comment kept", jtext:find("// the only one", 1, true) ~= nil, jtext)
+  ok("ignore: export merged into rule", jtext:find('"keepMe".*"unusedFn"') ~= nil, jtext)
+  ok("ignore: new key appended", jtext:find('"ignoreFindings"') ~= nil, jtext)
+  ok(
+    "ignore: new key is last",
+    jtext:find('"ignoreExports".*"ignoreFindings"') ~= nil and jtext:find('"ignoreFindings".*"entry"') == nil,
+    jtext
+  )
+
+  -- No config yet: one is created, and it parses.
+  local nroot = vim.fn.tempname()
+  vim.fn.mkdir(nroot, "p")
+  ok("ignore: creates a config", ignore.add_finding(nroot, "src/a.ts"))
+  local created = ignore.read(nroot .. "/.fallowrc.json")
+  ok("ignore: created config parses", created and vim.deep_equal(created.ignoreFindings, { "src/a.ts" }))
+
+  vim.fn.confirm = real_confirm
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
