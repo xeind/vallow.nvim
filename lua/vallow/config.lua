@@ -134,6 +134,12 @@ M.defaults = {
   -- Silently re-run fallow after saving a JS/TS file (background, no loading flash).
   auto_refresh = false,
 
+  -- One long-lived `fallow watch` per project root. fallow itself decides when
+  -- to re-analyse, so no run is spawned per save. Toggle with :Vallow watch.
+  watch = {
+    enabled = false,
+  },
+
   -- End-of-line virtual text on the dependency lines of an open package.json.
   manifest_overlay = true,
 

@@ -66,6 +66,11 @@ M.open = function()
       if not require("vallow.config").get().auto_refresh then
         return
       end
+      -- Watch mode already re-runs fallow itself; a second full run would only
+      -- duplicate the work.
+      if require("vallow.watch").is_active() then
+        return
+      end
       -- Only refresh if the saved file belongs to the current project root
       local root = M.state.results and M.state.results.repo_root
       if root then
@@ -102,6 +107,8 @@ M.open = function()
       local old_root = M.state.results and M.state.results.repo_root
       if new_root ~= old_root then
         M.state.results = nil
+        -- The watcher belongs to one root; move it to the new one.
+        require("vallow.watch").restart(M._accept)
         -- Re-prefetch for the new directory
         runner.run(function(results)
           M.state.results = results
@@ -248,16 +255,8 @@ M._bg_refresh = function()
   local old_total = _count_total(M.state.results)
   require("vallow.runner").run(function(results)
     local new_total = _count_total(results)
-    M.state.results = results
-    if M._is_open() then
-      require("vallow.panel.render").render(M.state.buf, results, M.state.win)
-      require("vallow.panel.tabs").set_winbar(
-        M.state.win,
-        M.state.current_section,
-        results,
-        require("vallow.config").get()
-      )
-    elseif old_total >= 0 and new_total ~= old_total then
+    M._accept(results)
+    if not M._is_open() and old_total >= 0 and new_total ~= old_total then
       -- Panel is closed — notify about count change
       local diff = new_total - old_total
       if diff > 0 then
@@ -272,7 +271,6 @@ M._bg_refresh = function()
         )
       end
     end
-    M._on_results(results)
   end)
 end
 
@@ -297,6 +295,23 @@ M.prefetch = function()
     M.state.results = results
     M._on_results(results)
   end)
+end
+
+-- Take a finished set of results: store them, re-render an open panel, and
+-- fire everything that reacts to a run. Shared by the background refresh and
+-- by watch mode.
+M._accept = function(results)
+  M.state.results = results
+  if M._is_open() then
+    require("vallow.panel.render").render(M.state.buf, results, M.state.win)
+    require("vallow.panel.tabs").set_winbar(
+      M.state.win,
+      M.state.current_section,
+      results,
+      require("vallow.config").get()
+    )
+  end
+  M._on_results(results)
 end
 
 -- Everything that reacts to a finished run: inline diagnostics, explorer

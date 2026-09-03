@@ -75,6 +75,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow dashboard` | Health dashboard float: score gauge, penalties, vital signs, trend |
 | `:Vallow audit [ref]` | Review the files changed since `ref` (default `main`, else `master`) |
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
+| `:Vallow watch` | Toggle watch mode: one `fallow watch` process streams results on every file change |
 | `:Vallow refresh` | Re-run fallow and refresh |
 | `:Vallow search` | Search findings |
 | `:VallowRefresh` | Re-run fallow and refresh |
@@ -156,6 +157,7 @@ require("vallow").setup({
   max_items = 30,  -- items per category before "N more..." expands
   manifest_overlay = true,  -- virtual text per dependency line in package.json
   auto_refresh = false,  -- re-run fallow silently on every JS/TS file save
+  watch = { enabled = false },  -- one long-lived `fallow watch` streaming results instead
   cache = true,  -- reopen with the last run's results, marked (stale), while fallow re-runs
 
   diagnostics = {
@@ -242,6 +244,21 @@ text at the end: `unused`, `unused (dev)`, `type-only`, `test-only`, or
 `dev dep in prod`. Packages your code imports but never listed are named on the
 closing brace of the `dependencies` block. Turn it off with
 `manifest_overlay = false`.
+
+### Watch mode
+
+```lua
+require("vallow").setup({ watch = { enabled = true } })
+```
+
+One `fallow watch --format json` process per project root stays up and streams
+a fresh result whenever a file changes. Findings, diagnostics, and the panel
+update without a save hook, and `auto_refresh` stops spawning runs while the
+watcher is up. `:Vallow watch` toggles it. The process dies with Neovim and
+moves with the project root.
+
+fallow streams the dead-code analysis only, so duplicates and health keep the
+values of the last full run. Press `r` for those.
 
 ### Picker extensions
 

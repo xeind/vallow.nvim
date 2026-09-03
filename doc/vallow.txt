@@ -112,6 +112,20 @@ subsequent opens results are shown instantly from cache.
 :Vallow production
     Toggle production mode (test and dev files excluded) and re-run.
 
+                                                           *:Vallow-watch*
+:Vallow watch
+    Toggle watch mode. One `fallow watch --format json --quiet --no-clear`
+    process per project root stays up and streams a result whenever a file
+    changes; the panel, the diagnostics and the explorer decorations follow
+    it. While the watcher runs, `auto_refresh` spawns no runs of its own.
+
+    fallow streams the dead-code analysis only, so the duplicate and health
+    buckets keep the values of the last full run. Press r for those.
+
+    The process stops when Neovim exits and restarts on the new root when
+    the working directory moves to another project. Start it at boot with
+    `watch = { enabled = true }`, see |vallow-config|.
+
 :Vallow refresh
     Same as |:VallowRefresh|.
 
@@ -292,6 +306,10 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     -- Only fires for files inside the detected project root.
     -- false = disabled (default).
     auto_refresh = false,
+
+    -- Watch mode: keep one `fallow watch` per project root and take its
+    -- streamed results. See |:Vallow-watch|.
+    watch = { enabled = false },
 
     -- Cache the last results per project root under
     -- stdpath("cache")/vallow. On open, cached results render at once with

@@ -29,6 +29,11 @@ M.setup = function(opts)
     end,
   })
 
+  -- Watch mode: one fallow process streams results until Neovim exits.
+  if (require("vallow.config").get().watch or {}).enabled then
+    require("vallow.watch").start(require("vallow.panel")._accept)
+  end
+
   -- Register the snacks picker source once snacks itself is loaded. Requiring
   -- it here would force-load a plugin the user may have set to load lazily.
   if package.loaded["snacks"] then

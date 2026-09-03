@@ -998,6 +998,61 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 22. Watch mode: the stream parser, the carried buckets, and a live run.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local watch = require("vallow.watch")
+
+  -- The parser only emits objects that decode, whatever noise surrounds them.
+  local seen = {}
+  local function feed(chunk)
+    watch._feed(chunk, function(o)
+      table.insert(seen, o)
+    end)
+  end
+  watch._buf = ""
+  feed('WARN node_modules missing\n')
+  eq("watch: noise emits nothing", #seen, 0)
+  feed('{"kind":"dead-code","total_issues":')
+  eq("watch: partial emits nothing", #seen, 0)
+  feed("2}\n")
+  eq("watch: object emitted", #seen, 1)
+  eq("watch: object decoded", seen[1] and seen[1].total_issues, 2)
+  -- A truncated write followed by a fresh object: the truncated one is dropped.
+  feed('{"kind":"dead-code","summ{"kind":"dead-code","total_issues":3}\n')
+  eq("watch: truncated write skipped", #seen, 2)
+  eq("watch: later object decoded", seen[2] and seen[2].total_issues, 3)
+  watch._buf = ""
+
+  -- watch streams dead code only, so health and duplicates carry over.
+  local carried = watch._carry(
+    { findings = { unused_exports = { count = 1, items = {} }, clone_groups = { count = 0, items = {} } } },
+    { findings = { clone_groups = { count = 4, items = {} }, health_score = { score = 70 } } }
+  )
+  eq("watch: clone groups carried", carried.findings.clone_groups.count, 4)
+  eq("watch: health score carried", carried.findings.health_score.score, 70)
+  eq("watch: dead code kept", carried.findings.unused_exports.count, 1)
+
+  -- A live `fallow watch` against the fixture reports the same counts as a run.
+  local got = nil
+  ok("watch: starts", watch.start(function(results)
+    got = got or results
+  end))
+  vim.wait(30000, function()
+    return got ~= nil
+  end, 100)
+  ok("watch: active", watch.is_active())
+  ok("watch: streamed results", got ~= nil)
+  if got then
+    eq("watch: unused_exports", count(got, "unused_exports"), 1)
+    eq("watch: unresolved_imports", count(got, "unresolved_imports"), 1)
+    ok("watch: renders", has_line(render_lines(got), "Unused Exports"))
+  end
+  watch.stop()
+  ok("watch: stopped", not watch.is_active())
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
