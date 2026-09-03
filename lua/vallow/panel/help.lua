@@ -45,6 +45,7 @@ local SECTIONS = {
       { key = "gt", desc = "trace export / dependency" },
       { key = "d", desc = "diff two clone instances" },
       { key = "D", desc = "health dashboard" },
+      { key = "X", desc = "preview and apply fallow fix" },
       { key = "r", desc = "refresh" },
       { key = "Q", desc = "send to quickfix list" },
       { key = "y", desc = "yank path:line" },

@@ -1053,6 +1053,49 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 23. Fix preview: real dry-run output, grouped by file. Nothing is applied.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  local fix = require("vallow.fix")
+  local runner = require("vallow.runner")
+  local root = runner.find_root()
+
+  local b = fix._lines({
+    fixes = {
+      { type = "remove_export", path = "src/a.ts", line = 7, name = "unusedFn" },
+      { type = "remove_dependency", package = "lodash", location = "dependencies", file = root .. "/package.json" },
+      { type = "brand_new_kind", name = "whatever" },
+    },
+  }, root)
+  ok("fix: file group", has_line(b.lines, "^  src/a%.ts$"), vim.inspect(b.lines))
+  ok("fix: export row", has_line(b.lines, "7  remove export  unusedFn"))
+  ok("fix: dependency row", has_line(b.lines, "remove dependency  lodash %(dependencies%)"))
+  ok("fix: unknown kind survives", has_line(b.lines, "brand new kind  whatever"))
+  ok("fix: total", has_line(b.lines, "3 fixes"))
+  local _, empty = fix._lines({ fixes = {} }, root)
+  eq("fix: nothing to fix", empty, 0)
+  eq("fix: no blockers", #fix._blockers({}), 0)
+  eq(
+    "fix: type-aware timeout blocks",
+    #fix._blockers({ _meta = { type_aware = { warnings = { "semantic pass timed out" } } } }),
+    1
+  )
+
+  -- Against real fallow: the dry run reports the fixture's unused export.
+  local cmd = { runner.resolve_cmd(root), "fix", "--dry-run", "--format", "json", "--quiet", "--no-create-config" }
+  runner._job(cmd, root, function(job_ok, data)
+    vim.schedule(function()
+      ok("fix: dry run ran", job_ok, tostring(data))
+      if job_ok and type(data) == "table" then
+        eq("fix: dry_run flag", data.dry_run, true)
+        local lines = fix._lines(data, root).lines
+        ok("fix: dry run lists unusedFn", has_line(lines, "unusedFn"), vim.inspect(lines))
+      end
+      next_step()
+    end)
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

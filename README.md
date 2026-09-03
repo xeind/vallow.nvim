@@ -76,6 +76,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow audit [ref]` | Review the files changed since `ref` (default `main`, else `master`) |
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
 | `:Vallow watch` | Toggle watch mode: one `fallow watch` process streams results on every file change |
+| `:Vallow fix` | Preview `fallow fix --dry-run`, apply it after a confirm |
 | `:Vallow refresh` | Re-run fallow and refresh |
 | `:Vallow search` | Search findings |
 | `:VallowRefresh` | Re-run fallow and refresh |
@@ -112,6 +113,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `gt` | Trace an unused export or dependency |
 | `d` | Diff the two largest instances of a clone group |
 | `D` | Health dashboard float |
+| `X` | Preview the fixes fallow would make, apply them after a confirm |
 | `gf` | Open picker (fuzzy search all findings) |
 | `P` | Peek at file in floating window (whole range for clones and functions) |
 | `Q` | Send to quickfix |

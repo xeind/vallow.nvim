@@ -109,6 +109,24 @@ subsequent opens results are shown instantly from cache.
     :Vallow refresh re-runs the audit; plain :Vallow returns to the normal
     run.
 
+                                                             *:Vallow-fix*
+:Vallow fix
+    Run `fallow fix --dry-run --format json --quiet --no-create-config` and
+    show what fallow would change: one block per file, each row the line,
+    the kind of fix, and the export or package it removes. <CR> on a row
+    jumps to it, q closes.
+
+    Nothing is written until you answer Yes to the prompt, which defaults
+    to No. Yes runs the same command with --yes, reports how many fixes
+    landed and how many were skipped, runs |:checktime| so open buffers
+    reload, and refreshes the panel.
+
+    fallow never creates a config file here (--no-create-config). If the
+    type-aware pass timed out, or fallow exits 2 or higher, the message is
+    shown and nothing is applied.
+
+    X in the panel does the same.
+
 :Vallow production
     Toggle production mode (test and dev files excluded) and re-run.
 
@@ -249,6 +267,8 @@ ACTIONS ~
             two largest instances in a new tab as two vertical windows
             with |:diffthis| on both, each at the start of its own
             instance. Further instances are named in a notification.
+  X         Preview the fixes of |:Vallow-fix| and apply them after a
+            confirm. Destructive: it rewrites files on disk.
   D         Open the health dashboard float — same as
             |:Vallow-dashboard|.
   x         Ignore the finding under the cursor. |vim.ui.select| offers:

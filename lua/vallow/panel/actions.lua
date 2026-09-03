@@ -155,6 +155,9 @@ M.setup = function(buf)
   map("D", function()
     require("vallow.dashboard").open()
   end)
+  map("X", function()
+    require("vallow.fix").open()
+  end)
 end
 
 -- Categories whose findings name a package rather than an export.
