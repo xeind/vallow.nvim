@@ -78,6 +78,31 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   `type_only_dependencies` and `test_only_dependencies` as the Misplaced
   Deps category.
 
+## Batch 5 — done
+
+- **Watch mode.** One `fallow watch --format json --quiet --no-clear` per
+  project root streams a result on every file change. `:Vallow watch`, or
+  `watch = { enabled = true }`. fallow does not write the stream atomically,
+  so the parser keeps the text after the last object start and emits it once
+  it decodes. watch reports dead code only; the duplicate and health buckets
+  of the last full run are carried over. auto-refresh spawns no run while the
+  watcher is up.
+- **Fix preview.** `:Vallow fix` and `X` render `fallow fix --dry-run` as a
+  fix list grouped by file. The confirm defaults to No; only Yes runs
+  `--yes`, then checktime and a refresh. Exit 2 or higher, or a type-aware
+  timeout, applies nothing.
+- **Cancel and debounce.** A new run stops the fallow jobs of the previous
+  one. Auto-refresh debounces at 300 ms, and every path that starts a run
+  drops the pending timer, so an explicit `r` is no longer overtaken by the
+  auto-refresh queued behind it.
+- **Extmarks.** The panel and the summary float highlight with
+  `nvim_buf_set_extmark` instead of the deprecated `nvim_buf_add_highlight`.
+- **Picker.** fzf-lua selections come back through a lookup keyed by the item
+  string, so a colon in a path no longer breaks the jump.
+- **Ignore writes.** `.fallowrc` files are edited as text: key order,
+  formatting and JSONC comments survive, and `.fallowrc.jsonc` is used when
+  it exists.
+
 ## Conventions
 
 - stylua on every touched line. Match existing style.
