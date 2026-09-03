@@ -295,7 +295,10 @@ M.summary = function()
 
   local ns = vim.api.nvim_create_namespace("vallow_summary")
   for _, h in ipairs(hls) do
-    vim.api.nvim_buf_add_highlight(fbuf, ns, h.hl, h.lnum, 0, -1)
+    vim.api.nvim_buf_set_extmark(fbuf, ns, h.lnum, 0, {
+      end_col = #(lines[h.lnum + 1] or ""),
+      hl_group = h.hl,
+    })
   end
 
   -- Close on any key

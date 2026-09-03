@@ -1128,6 +1128,42 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 25. Highlights are extmarks, not the deprecated nvim_buf_add_highlight.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  require("vallow.runner").run(function(results)
+    local buf = vim.api.nvim_create_buf(false, true)
+    require("vallow.panel.render").render(buf, results, nil)
+    local ns = vim.api.nvim_create_namespace("vallow")
+    local marks = vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, { details = true })
+    ok("extmarks: render sets marks", #marks > 0)
+    local groups, bounded = {}, true
+    for _, m in ipairs(marks) do
+      groups[m[4].hl_group or ""] = true
+      local line = vim.api.nvim_buf_get_lines(buf, m[2], m[2] + 1, false)[1] or ""
+      if (m[4].end_col or 0) > #line then
+        bounded = false
+      end
+    end
+    ok("extmarks: header group present", groups["VallowHeader"] ~= nil, vim.inspect(vim.tbl_keys(groups)))
+    ok("extmarks: end_col within the line", bounded)
+    -- A re-render replaces the marks instead of stacking a second set.
+    require("vallow.panel.render").render(buf, results, nil)
+    eq("extmarks: re-render replaces", #vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, {}), #marks)
+    require("vallow.panel.render").clear(buf)
+    vim.api.nvim_buf_delete(buf, { force = true })
+
+    -- The summary float highlights through extmarks too.
+    require("vallow.panel").state.results = results
+    require("vallow").summary()
+    local fbuf = vim.api.nvim_get_current_buf()
+    local sns = vim.api.nvim_create_namespace("vallow_summary")
+    ok("extmarks: summary marks", #vim.api.nvim_buf_get_extmarks(fbuf, sns, 0, -1, {}) > 0)
+    vim.api.nvim_win_close(0, true)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

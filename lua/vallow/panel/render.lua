@@ -906,10 +906,14 @@ M._flush = function(buf, lines, hl_queue)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   for _, h in ipairs(hl_queue) do
     local lnum0, cs, ce, grp = h[1], h[2], h[3], h[4]
-    if ce == -1 then
-      ce = #(lines[lnum0 + 1] or "")
+    local eol = #(lines[lnum0 + 1] or "")
+    if ce == -1 or ce > eol then
+      ce = eol
     end
-    pcall(vim.api.nvim_buf_add_highlight, buf, ns, grp, lnum0, cs, ce)
+    pcall(vim.api.nvim_buf_set_extmark, buf, ns, lnum0, math.min(cs, ce), {
+      end_col = ce,
+      hl_group = grp,
+    })
   end
   vim.bo[buf].modifiable = false
 end
