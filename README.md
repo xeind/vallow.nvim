@@ -138,7 +138,7 @@ Sections and categories shown only when they have findings.
 | Section | Categories |
 |---|---|
 | **UNUSED CODE** | Unused Exports, Types, Members, Files, Dependencies, Misplaced Deps, Unlisted Deps |
-| **ISSUES** | Unresolved Imports, Circular Deps, Duplicate Exports, Stale Suppressions |
+| **ISSUES** | Unresolved Imports, Circular Deps, Package Cycles, Duplicate Exports, Stale Suppressions, Deprecated In Use |
 | **DUPLICATES** | Clone Groups |
 | **HEALTH** | Complexity, Hotspots, Refactoring Targets |
 | **ARCHITECTURE** | Boundary Violations |

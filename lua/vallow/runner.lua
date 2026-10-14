@@ -596,6 +596,69 @@ M._normalize = function(raw, root)
   end
   findings.circular_deps.count = #findings.circular_deps.items
 
+  -- package_cycles[] (v3.31+): cycles between workspace packages.
+  -- { packages: [name...], package_roots: [dir...], edges: [one example import per hop],
+  --   group_truncated }. Edge field names are not in the 3.29 contract, so read them loosely.
+  for _, v in ipairs(check.package_cycles or {}) do
+    local edges = {}
+    for _, e in ipairs(v.edges or {}) do
+      local ep = e.path or e.from_path or e.file or ""
+      table.insert(edges, {
+        path = abs(ep),
+        relative_path = rel(abs(ep)),
+        lnum = e.line or 1,
+        col = e.col or 0,
+        type_only = e.type_only,
+      })
+    end
+    local first = edges[1] or {}
+    table.insert(findings.package_cycles.items, {
+      path = first.path or "",
+      relative_path = first.relative_path or "",
+      lnum = first.lnum or 1,
+      col = first.col or 0,
+      name = table.concat(v.packages or {}, " \u{2192} "),
+      packages = v.packages or {},
+      package_roots = v.package_roots or {},
+      edges = edges,
+      group_truncated = v.group_truncated,
+      actions = v.actions,
+      introduced = v.introduced,
+      effective_severity = v.effective_severity,
+    })
+  end
+  findings.package_cycles.count = #findings.package_cycles.items
+
+  -- deprecated_exports_in_use[] (v3.29+, opt-in rule): @deprecated exports that
+  -- reachable files still reference. path/line locate the export itself.
+  for _, v in ipairs(check.deprecated_exports_in_use or {}) do
+    local consumers = {}
+    for _, c in ipairs(v.consumers or {}) do
+      table.insert(consumers, {
+        path = abs(c.path or ""),
+        relative_path = rel(abs(c.path or "")),
+        lnum = c.line or 1,
+        col = c.col or 0,
+        kind = c.kind,
+      })
+    end
+    table.insert(findings.deprecated_exports_in_use.items, {
+      path = abs(v.path or ""),
+      relative_path = rel(abs(v.path or "")),
+      lnum = v.line or 1,
+      col = v.col or 0,
+      name = v.export_name or "",
+      reason = v.deprecated_reason,
+      consumer_count = v.consumer_count or #consumers,
+      consumers = consumers,
+      public_api = v.public_api,
+      actions = v.actions,
+      introduced = v.introduced,
+      effective_severity = v.effective_severity,
+    })
+  end
+  findings.deprecated_exports_in_use.count = #findings.deprecated_exports_in_use.items
+
   -- boundary_violations[]
   for _, v in ipairs(check.boundary_violations or {}) do
     table.insert(findings.boundary_violations.items, {
@@ -762,6 +825,8 @@ M._normalize = function(raw, root)
     "unlisted_deps",
     "duplicate_exports",
     "circular_deps",
+    "package_cycles",
+    "deprecated_exports_in_use",
     "boundary_violations",
     "dev_dep_in_prod",
     "stale_suppressions",
@@ -923,6 +988,8 @@ M._empty_findings = function()
     unlisted_deps = { count = 0, items = {} },
     duplicate_exports = { count = 0, items = {} },
     circular_deps = { count = 0, items = {} },
+    package_cycles = { count = 0, items = {} },
+    deprecated_exports_in_use = { count = 0, items = {} },
     boundary_violations = { count = 0, items = {} },
     -- ISSUES (v3.1+)
     dev_dep_in_prod = { count = 0, items = {} },

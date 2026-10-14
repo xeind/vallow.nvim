@@ -398,6 +398,8 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
         unlisted_deps        = { enabled = true, severity = "warn" },
         duplicate_exports    = { enabled = true, severity = "warn" },
         circular_deps        = { enabled = true, severity = "warn" },
+        package_cycles       = { enabled = true, severity = "warn" },
+        deprecated_exports_in_use = { enabled = true, severity = "warn" },
         health_complexity    = { enabled = true, severity = "warn" },
         dev_dep_in_prod      = { enabled = true, severity = "error" },
         css_token_drift      = { enabled = true, severity = "warn" },
@@ -502,8 +504,20 @@ ISSUES ~
                         the full cycle chain (a → b → c → a). Jump to the
                         entry file of the cycle.
 
+  Package Cycles        Import cycles between workspace packages in a
+                        monorepo (fallow 3.31+). Each row shows the package
+                        chain (a → b → a). Jump to the example import of
+                        the first hop.
+
   Duplicate Exports     The same name exported from multiple files. Shows
                         all locations so you can consolidate.
+
+  Deprecated In Use     Exports marked @deprecated that reachable files
+                        still import (fallow 3.29+). Off by default in
+                        fallow: set "deprecated-exports-in-use" to "warn"
+                        in .fallowrc.json rules. Shows the export, its
+                        location, the consumer count and the deprecation
+                        message. <CR> opens the export.
 
 DUPLICATES ~
 

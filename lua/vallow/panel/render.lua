@@ -473,6 +473,39 @@ M._render_items = function(cat_key, items, push, hl_last, win_width)
         push(row, #indent, -1, "VallowPath", item)
       end
     end
+  elseif cat_key == "package_cycles" then
+    -- Package names in cycle order, closed back to the first.
+    for _, item in ipairs(items) do
+      local pkgs = {}
+      for _, n in ipairs(item.packages or {}) do
+        table.insert(pkgs, tostring(n))
+      end
+      if #pkgs >= 2 then
+        table.insert(pkgs, pkgs[1])
+      end
+      local chain = table.concat(pkgs, " → ")
+      if chain == "" then
+        chain = item.relative_path or ""
+      end
+      push(indent .. chain, #indent, -1, "VallowPath", item)
+    end
+  elseif cat_key == "deprecated_exports_in_use" then
+    for _, item in ipairs(items) do
+      local n = item.name or ""
+      push(indent .. n, #indent, #indent + #n, "VallowName", item)
+      local rp = item.relative_path or ""
+      local ln = item.lnum and (":" .. item.lnum) or ""
+      local uses = item.consumer_count and ("  " .. item.consumer_count .. " uses") or ""
+      local sub = "        " .. rp .. ln
+      push(sub .. uses, 8, 8 + #rp, "VallowPath", item)
+      hl_last(8 + #rp, 8 + #rp + #ln, "VallowKind")
+      if uses ~= "" then
+        hl_last(8 + #rp + #ln, 8 + #rp + #ln + #uses, "Comment")
+      end
+      if item.reason and item.reason ~= "" then
+        push("        " .. item.reason, 8, -1, "Comment", nil)
+      end
+    end
   elseif cat_key == "boundary_violations" then
     local path_w = 28
     do

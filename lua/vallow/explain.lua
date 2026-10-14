@@ -19,6 +19,7 @@ M.ISSUE_TYPE = {
   duplicate_exports = "duplicate-export",
   circular_deps = "circular-dependency",
   boundary_violations = "boundary-violation",
+  deprecated_exports_in_use = "deprecated-export-in-use",
   clone_groups = "code-duplication",
   health_complexity = "complexity",
   dev_dep_in_prod = "dev-dependency-in-production",
