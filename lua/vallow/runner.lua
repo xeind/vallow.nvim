@@ -599,12 +599,14 @@ M._normalize = function(raw, root)
   -- boundary_violations[]
   for _, v in ipairs(check.boundary_violations or {}) do
     table.insert(findings.boundary_violations.items, {
-      path = abs(v.path or ""),
-      relative_path = rel(abs(v.path or "")),
+      path = abs(v.from_path or ""),
+      relative_path = rel(abs(v.from_path or "")),
       lnum = v.line or 1,
       col = v.col or 0,
-      import_path = v.import_path or v.importPath or "",
-      boundary_name = v.boundary_name or v.boundaryName or "",
+      import_path = v.import_specifier or "",
+      boundary_name = (v.from_zone or "?") .. " → " .. (v.to_zone or "?"),
+      to_path = v.to_path,
+      via_path = v.via_path, -- v3.31+: the barrel, when to_path is the origin module
       actions = v.actions,
       introduced = v.introduced,
     })

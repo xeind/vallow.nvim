@@ -1333,6 +1333,38 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 28. Normalizer: field names for boundary violations and dev deps in production.
+table.insert(steps, function(next_step)
+  local root = vim.fn.getcwd()
+  local results = require("vallow.runner")._normalize({
+    boundary_violations = {
+      {
+        from_path = "src/ui/a.ts",
+        to_path = "src/db/b.ts",
+        from_zone = "ui",
+        to_zone = "db",
+        import_specifier = "../db/b",
+        line = 3,
+        col = 0,
+      },
+    },
+    dev_dependencies_in_production = { { package_name = "lodash", path = "package.json", line = 5 } },
+    workspace_diagnostics = {
+      { kind = "boundaries-not-configured", path = ".", message = "info" },
+      { kind = "node-modules-missing", path = "node_modules", message = "warn", degrades_analysis = true },
+    },
+  }, root)
+  local bv = results.findings.boundary_violations.items[1]
+  eq("boundary: path", bv.relative_path, "src/ui/a.ts")
+  eq("boundary: lnum", bv.lnum, 3)
+  eq("boundary: import", bv.import_path, "../db/b")
+  eq("boundary: zones", bv.boundary_name, "ui \u{2192} db")
+  eq("dev_dep_in_prod: count", count(results, "dev_dep_in_prod"), 1)
+  eq("dev_dep_in_prod: name", results.findings.dev_dep_in_prod.items[1].name, "lodash")
+  eq("notices: only degrading", vim.inspect(results.notices), vim.inspect({ "warn" }))
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
