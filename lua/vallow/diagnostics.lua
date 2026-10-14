@@ -3,6 +3,7 @@
 local M = {}
 
 local ns = vim.api.nvim_create_namespace("vallow_diag")
+M.ns = ns
 -- Complexity virtual lines and hotspot signs are extmarks, not diagnostics,
 -- so they live in their own namespace.
 local virt_ns = vim.api.nvim_create_namespace("vallow_virt")
@@ -140,7 +141,7 @@ M.apply = function(findings)
   -- Collect all diagnostics keyed by absolute path
   local diags_by_path = {}
 
-  local function add(path, lnum, col, message, severity)
+  local function add(path, lnum, col, message, severity, cat_key, item)
     if not path or path == "" then
       return
     end
@@ -153,6 +154,8 @@ M.apply = function(findings)
       message = message,
       severity = severity,
       source = "fallow",
+      -- cursor.lua reads the finding back from the diagnostic under the cursor.
+      user_data = { vallow = { category = cat_key, item = item } },
     })
   end
 
@@ -164,7 +167,7 @@ M.apply = function(findings)
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
         local msg = (item.name and item.name ~= "") and (lbl .. ": " .. item.name) or lbl
-        add(item.path, item.lnum, item.col or 0, msg, sev)
+        add(item.path, item.lnum, item.col or 0, msg, sev, cat_key, item)
       end
     end
   end
@@ -176,7 +179,7 @@ M.apply = function(findings)
     if bucket and bucket.count > 0 and sev then
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
-        add(item.path, item.lnum, 0, lbl .. ": " .. (item.name or ""), sev)
+        add(item.path, item.lnum, 0, lbl .. ": " .. (item.name or ""), sev, cat_key, item)
       end
     end
   end
@@ -253,6 +256,7 @@ M.apply_buf = function(bufnr, findings)
             message = msg,
             severity = sev,
             source = "fallow",
+            user_data = { vallow = { category = cat_key, item = item } },
           })
         end
       end
@@ -272,6 +276,7 @@ M.apply_buf = function(bufnr, findings)
             message = lbl .. ": " .. (item.name or ""),
             severity = sev,
             source = "fallow",
+            user_data = { vallow = { category = cat_key, item = item } },
           })
         end
       end

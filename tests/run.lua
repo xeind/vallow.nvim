@@ -217,6 +217,43 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 6b. Actions and jumps from the source buffer, without the panel.
+table.insert(steps, function(next_step)
+  require("vallow").setup({})
+  require("vallow.runner").run(function(results)
+    local cursor = require("vallow.cursor")
+    vim.cmd("edit src/a.ts")
+    require("vallow.diagnostics").apply(results.findings)
+
+    vim.api.nvim_win_set_cursor(0, { 3, 0 })
+    eq("cursor: no finding on a clean line", #cursor.findings(), 0)
+    cursor.jump(1, 1)
+    eq("cursor: next lands on unusedFn", vim.api.nvim_win_get_cursor(0)[1], 7)
+    local found = cursor.findings()
+    eq("cursor: one finding on the line", #found, 1)
+    eq("cursor: category", found[1] and found[1].category, "unused_exports")
+    eq("cursor: item name", found[1] and found[1].item.name, "unusedFn")
+
+    local labels = {}
+    local select = vim.ui.select
+    vim.ui.select = function(items, opts, _)
+      for _, i in ipairs(items) do
+        table.insert(labels, opts.format_item(i))
+      end
+    end
+    cursor.action()
+    vim.ui.select = select
+    ok("cursor: action offers ignore", vim.tbl_contains(labels, "Ignore…"), vim.inspect(labels))
+    ok("cursor: action offers trace", vim.tbl_contains(labels, "Trace"), vim.inspect(labels))
+
+    cursor.jump(-1, 1)
+    eq("cursor: prev lands on Dead", vim.api.nvim_win_get_cursor(0)[1], 1)
+
+    require("vallow.diagnostics").clear()
+    next_step()
+  end)
+end)
+
 -- 7. resolve_cmd order: config override, node_modules/.bin, PATH.
 table.insert(steps, function(next_step)
   require("vallow").setup({})

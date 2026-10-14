@@ -144,6 +144,26 @@ subsequent opens results are shown instantly from cache.
     the working directory moves to another project. Start it at boot with
     `watch = { enabled = true }`, see |vallow-config|.
 
+                                                          *:Vallow-action*
+:Vallow action
+    Act on the vallow finding under the cursor in a source buffer, without
+    the panel: a |vim.ui.select| menu offers Ignore (as x in the panel),
+    Trace (as gt, for unused exports and dependencies) and Explain (as ge).
+    With several findings on the line, each entry names its finding.
+    It reads the findings from vallow's diagnostics, so it needs
+    `diagnostics.enabled` and finds nothing while the fallow LSP owns the
+    buffer.
+
+                                                            *:Vallow-next*
+:Vallow next
+:Vallow prev
+    Jump to the next or previous vallow diagnostic and open its float.
+    LSP and linter diagnostics are skipped. A count repeats the jump.
+    Suggested mappings: >lua
+        vim.keymap.set("n", "]v", "<cmd>Vallow next<cr>")
+        vim.keymap.set("n", "[v", "<cmd>Vallow prev<cr>")
+        vim.keymap.set("n", "<leader>va", "<cmd>Vallow action<cr>")
+<
 :Vallow refresh
     Same as |:VallowRefresh|.
 

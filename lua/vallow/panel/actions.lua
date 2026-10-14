@@ -185,15 +185,27 @@ M.trace = function(buf)
   if not item or item._type then
     return
   end
-  local cat = M._category_at_cursor(buf) or ""
-  local trace = require("vallow.trace")
+  M.trace_item(item, M._category_at_cursor(buf) or "")
+end
+
+-- True when gt has something to trace for this finding.
+M.traceable = function(item, cat)
   local name = item.name or ""
-  if EXPORT_CATEGORIES[cat] and name ~= "" and (item.relative_path or "") ~= "" then
-    trace.export(item.relative_path, name)
-  elseif DEPENDENCY_CATEGORIES[cat] and name ~= "" then
-    trace.dependency(name)
-  else
+  if name == "" then
+    return false
+  end
+  return DEPENDENCY_CATEGORIES[cat] or (EXPORT_CATEGORIES[cat] and (item.relative_path or "") ~= "") or false
+end
+
+-- Trace one finding of category cat. Shared with cursor.lua.
+M.trace_item = function(item, cat)
+  local trace = require("vallow.trace")
+  if not M.traceable(item, cat) then
     vim.notify("vallow: trace works on unused exports and dependencies", vim.log.levels.INFO)
+  elseif EXPORT_CATEGORIES[cat] then
+    trace.export(item.relative_path, item.name)
+  else
+    trace.dependency(item.name)
   end
 end
 
@@ -278,6 +290,11 @@ M.ignore = function(buf)
     vim.notify("vallow: no finding on this row", vim.log.levels.INFO)
     return
   end
+  M.ignore_item(item, M._category_at_cursor(buf) or "")
+end
+
+-- Offer the ways to silence one finding of category cat. Shared with cursor.lua.
+M.ignore_item = function(item, cat)
   local root = require("vallow.panel").state.results
   root = root and root.repo_root or require("vallow.runner").find_root()
   if not root then
@@ -285,7 +302,6 @@ M.ignore = function(buf)
   end
   local ignore = require("vallow.ignore")
   local rel = item.relative_path or ""
-  local cat = M._category_at_cursor(buf) or ""
 
   local choices = {}
   if rel ~= "" then
@@ -327,7 +343,13 @@ M.ignore = function(buf)
     end,
   }, function(choice)
     if choice and choice.run() then
-      require("vallow.panel").refresh()
+      -- From a source buffer the panel may be closed; refresh() is a no-op then.
+      local panel = require("vallow.panel")
+      if panel._is_open() then
+        panel.refresh()
+      else
+        panel.prefetch()
+      end
     end
   end)
 end

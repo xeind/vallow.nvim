@@ -27,6 +27,9 @@ engine for JS/TS. No tree-sitter, no LSP, no config needed on the Neovim side.
     { "<leader>V",  "<cmd>Vallow<cr>",        desc = "Vallow: toggle" },
     { "<leader>vr", "<cmd>VallowRefresh<cr>", desc = "Vallow: refresh" },
     { "<leader>vs", "<cmd>VallowSearch<cr>",  desc = "Vallow: search findings" },
+    { "<leader>va", "<cmd>Vallow action<cr>", desc = "Vallow: act on finding" },
+    { "]v",         "<cmd>Vallow next<cr>",   desc = "Vallow: next finding" },
+    { "[v",         "<cmd>Vallow prev<cr>",   desc = "Vallow: previous finding" },
   },
   opts = {},
 }
@@ -76,6 +79,8 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow audit [ref]` | Review the files changed since `ref` (default `main`, else `master`) |
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
 | `:Vallow watch` | Toggle watch mode: one `fallow watch` process streams results on every file change |
+| `:Vallow action` | Ignore, trace or explain the finding under the cursor in a source buffer |
+| `:Vallow next` / `:Vallow prev` | Jump to the next / previous vallow diagnostic, skipping LSP and linters |
 | `:Vallow fix` | Preview `fallow fix --dry-run`, apply it after a confirm |
 | `:Vallow refresh` | Re-run fallow and refresh |
 | `:Vallow search` | Search findings |
