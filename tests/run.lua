@@ -1393,6 +1393,49 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 31. Panel keeps filter, audit flag, and cursor across close/reopen; follow_buffer filters to the entered file.
+table.insert(steps, function(next_step)
+  local panel = require("vallow.panel")
+  local root = vim.fn.getcwd()
+  local function item(rel)
+    return { relative_path = rel, path = root .. "/" .. rel, name = "x", lnum = 1, col = 0 }
+  end
+  panel.state.results = {
+    repo_root = root,
+    findings = {
+      unused_files = { count = 2, items = { item("src/a.ts"), item("src/b.ts") } },
+    },
+  }
+  panel._bg_refresh = function() end
+  panel.open()
+  vim.b[panel.state.buf].vallow_filter = "src/a.ts"
+  vim.b[panel.state.buf].vallow_hide_inherited = true
+  vim.api.nvim_win_set_cursor(panel.state.win, { 2, 0 })
+  panel.close()
+  panel.open()
+  eq("state: filter kept", vim.b[panel.state.buf].vallow_filter, "src/a.ts")
+  eq("state: hide_inherited kept", vim.b[panel.state.buf].vallow_hide_inherited, true)
+  eq("state: cursor row kept", vim.api.nvim_win_get_cursor(panel.state.win)[1], 2)
+
+  local cfg = require("vallow.config").get()
+  local other = vim.api.nvim_create_buf(true, false)
+  vim.api.nvim_buf_set_name(other, root .. "/src/b.ts")
+  vim.api.nvim_set_current_win(vim.fn.win_getid(vim.fn.winnr("#")))
+  cfg.follow_buffer = false
+  panel._follow_buffer(other)
+  eq("follow: off leaves filter", vim.b[panel.state.buf].vallow_filter, "src/a.ts")
+  cfg.follow_buffer = true
+  panel._follow_buffer(other)
+  eq("follow: filter set", vim.b[panel.state.buf].vallow_filter, "src/b.ts")
+  panel._follow_buffer(panel.state.buf)
+  local scratch = vim.api.nvim_create_buf(false, true)
+  panel._follow_buffer(scratch)
+  eq("follow: skips panel and non-file", vim.b[panel.state.buf].vallow_filter, "src/b.ts")
+  cfg.follow_buffer = false
+  panel.close()
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

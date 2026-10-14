@@ -127,6 +127,10 @@ All remappable via `setup({ keymaps = ... })`.
 | `q` | Close |
 | `?` | Show keymap help |
 
+Closing and reopening the panel keeps the tab, folds, filter, audit `i` flag,
+and cursor row. With `follow_buffer = true` the filter follows the file you
+enter; a file with no findings shows the filter line and an empty list.
+
 ## Panel structure
 
 Sections and categories shown only when they have findings.
@@ -164,6 +168,7 @@ require("vallow").setup({
   max_items = 30,  -- items per category before "N more..." expands
   manifest_overlay = true,  -- virtual text per dependency line in package.json
   auto_refresh = false,  -- re-run fallow silently 300 ms after a JS/TS file save
+  follow_buffer = false,  -- with the panel open, filter it to the file you enter (like `%`)
   watch = { enabled = false },  -- one long-lived `fallow watch` streaming results instead
   cache = true,  -- reopen with the last run's results, marked (stale), while fallow re-runs
 

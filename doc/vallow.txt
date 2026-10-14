@@ -350,6 +350,12 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     -- the previous one. false = disabled (default).
     auto_refresh = false,
 
+    -- While the panel is open, entering a file buffer filters the panel to
+    -- that file, as `%` does. A file with no findings shows the filter line
+    -- and an empty list; press `F` to clear. The panel also keeps its
+    -- filter, audit "new only" flag, and cursor row across close and reopen.
+    follow_buffer = false,
+
     -- Watch mode: keep one `fallow watch` per project root and take its
     -- streamed results. See |:Vallow-watch|.
     watch = { enabled = false },

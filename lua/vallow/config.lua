@@ -134,6 +134,10 @@ M.defaults = {
   -- Silently re-run fallow after saving a JS/TS file (background, no loading flash).
   auto_refresh = false,
 
+  -- While the panel is open, entering a file buffer filters the panel to
+  -- that file (the same filter `%` sets).
+  follow_buffer = false,
+
   -- One long-lived `fallow watch` per project root. fallow itself decides when
   -- to re-analyse, so no run is spawned per save. Toggle with :Vallow watch.
   watch = {

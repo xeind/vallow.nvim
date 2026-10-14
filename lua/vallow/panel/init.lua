@@ -12,6 +12,10 @@ M.state = {
   fold_secs = {},
   fold_cats = {},
   fold_full = {},
+  -- View state persisted across panel closes, saved when the panel window closes
+  filter = "",
+  hide_inherited = false,
+  cursor = nil, -- { row, col }
 }
 
 -- Debounce timer for auto-refresh
@@ -62,10 +66,26 @@ M.open = function()
     end,
   })
 
+  -- Save view state when the window leaves, however it closes (:q, toggle, ...).
+  -- Buffer variables are wiped with the buffer.
+  vim.api.nvim_create_autocmd("BufWinLeave", {
+    buffer = M.state.buf,
+    once = true,
+    callback = function(ev)
+      M.state.filter = vim.b[ev.buf].vallow_filter or ""
+      M.state.hide_inherited = vim.b[ev.buf].vallow_hide_inherited == true
+      if M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
+        M.state.cursor = vim.api.nvim_win_get_cursor(M.state.win)
+      end
+    end,
+  })
+
   -- Restore fold state from previous session
   vim.b[M.state.buf].vallow_open_secs = M.state.fold_secs
   vim.b[M.state.buf].vallow_open_cats = M.state.fold_cats
   vim.b[M.state.buf].vallow_cats_full = M.state.fold_full
+  vim.b[M.state.buf].vallow_filter = M.state.filter
+  vim.b[M.state.buf].vallow_hide_inherited = M.state.hide_inherited
 
   require("vallow.panel.actions").setup(M.state.buf)
 
@@ -134,6 +154,14 @@ M.open = function()
     end,
   })
 
+  -- Follow the current buffer (opt-in via config.follow_buffer)
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = vim.api.nvim_create_augroup("VallowFollowBuffer", { clear = true }),
+    callback = function(ev)
+      M._follow_buffer(ev.buf)
+    end,
+  })
+
   if M.state.results then
     -- Results already cached (prefetched) — render immediately, then refresh silently
     local render = require("vallow.panel.render")
@@ -162,6 +190,45 @@ M.open = function()
     else
       M.refresh()
     end
+  end
+
+  if M.state.cursor and M._is_open() then
+    local nlines = vim.api.nvim_buf_line_count(M.state.buf)
+    pcall(vim.api.nvim_win_set_cursor, M.state.win, { math.min(M.state.cursor[1], nlines), M.state.cursor[2] })
+  end
+end
+
+-- Set the panel filter to the path of the entered buffer, relative to the
+-- project root. Skips the panel, floats, and buffers that are not files.
+M._follow_buffer = function(buf)
+  if not require("vallow.config").get().follow_buffer or not M._is_open() then
+    return
+  end
+  if buf == M.state.buf or vim.bo[buf].buftype ~= "" then
+    return
+  end
+  if vim.api.nvim_win_get_config(0).relative ~= "" then
+    return
+  end
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" then
+    return
+  end
+  local root = M.state.results and M.state.results.repo_root or require("vallow.runner").find_root()
+  if not root then
+    return
+  end
+  local prefix = root:gsub("/$", "") .. "/"
+  if name:sub(1, #prefix) ~= prefix then
+    return
+  end
+  local rel = name:sub(#prefix + 1)
+  if (vim.b[M.state.buf].vallow_filter or "") == rel then
+    return
+  end
+  vim.b[M.state.buf].vallow_filter = rel
+  if M.state.results then
+    require("vallow.panel.render").render(M.state.buf, M.state.results, M.state.win)
   end
 end
 
