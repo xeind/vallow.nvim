@@ -23,13 +23,33 @@ M._entry = function(fix, root)
   return { file = file, lnum = fix.line, text = label .. "  " .. what }
 end
 
--- Float body for a dry run: fixes grouped by file, newest counts last.
--- Returns the builder and the number of fixes.
+-- Real skipped total: fallow >= 3.24 splits it over several counters.
+-- Older output only has `skipped`.
+M._skipped_total = function(data)
+  local n = 0
+  for key, value in pairs(data) do
+    if type(key) == "string" and key:find("^skipped") and type(value) == "number" then
+      n = n + value
+    end
+  end
+  return n
+end
+
+-- Float body for a dry run: fixes grouped by file, skipped entries listed last.
+-- Returns the builder, the number of applicable fixes and the skip reasons.
 M._lines = function(data, root)
   local b = require("vallow.panel.float").builder()
   local order, by_file, total = {}, {}, 0
+  local skipped, reasons, seen = {}, {}, {}
   for _, fix in ipairs(data.fixes or {}) do
-    if type(fix) == "table" then
+    if type(fix) == "table" and fix.skipped then
+      table.insert(skipped, fix)
+      local reason = tostring(fix.skip_reason or "unknown"):gsub("_", " ")
+      if not seen[reason] then
+        seen[reason] = true
+        table.insert(reasons, reason)
+      end
+    elseif type(fix) == "table" then
       local e = M._entry(fix, root)
       if not by_file[e.file] then
         by_file[e.file] = {}
@@ -40,9 +60,9 @@ M._lines = function(data, root)
     end
   end
 
-  if total == 0 then
+  if total == 0 and #skipped == 0 then
     b.push("  Nothing to fix.", "Comment")
-    return b, 0
+    return b, 0, reasons
   end
 
   b.push("")
@@ -55,9 +75,24 @@ M._lines = function(data, root)
     end
     b.push("")
   end
-  b.push(("  %d fix%s · fallow rewrites these files"):format(total, total == 1 and "" or "es"), "VallowFooter")
-  b.push("")
-  return b, total
+  if #skipped > 0 then
+    b.push("  Skipped", "VallowPath")
+    for _, fix in ipairs(skipped) do
+      local e = M._entry(fix, root)
+      local what = fix.type == "skipped" and (fix.path or fix.file or "") or e.text
+      b.push(
+        "    " .. what .. "  (" .. tostring(fix.skip_reason or "unknown"):gsub("_", " ") .. ")",
+        "Comment",
+        e.file ~= "" and { path = e.file, lnum = e.lnum } or nil
+      )
+    end
+    b.push("")
+  end
+  if total > 0 then
+    b.push(("  %d fix%s · fallow rewrites these files"):format(total, total == 1 and "" or "es"), "VallowFooter")
+    b.push("")
+  end
+  return b, total, reasons
 end
 
 -- Reasons never to apply, even when fallow exited 0.
@@ -106,7 +141,7 @@ M.open = function()
         return
       end
 
-      local b, total = M._lines(data, root)
+      local b, total, reasons = M._lines(data, root)
       require("vallow.panel.float").open({
         title = "Vallow Fix (dry run)",
         lines = b.lines,
@@ -114,6 +149,12 @@ M.open = function()
         targets = b.targets,
       })
       if total == 0 then
+        if #reasons > 0 then
+          vim.notify(
+            "vallow: every fix was skipped (" .. table.concat(reasons, ", ") .. "); nothing applied",
+            vim.log.levels.WARN
+          )
+        end
         return
       end
       local prompt = ("Apply %d fix%s? Files are rewritten on disk."):format(total, total == 1 and "" or "es")
@@ -137,7 +178,7 @@ M._apply = function(bin, root)
         return
       end
       local fixed = data.total_fixed or 0
-      local skipped = data.skipped or 0
+      local skipped = M._skipped_total(data)
       vim.notify(
         ("vallow: %d fix%s applied%s"):format(
           fixed,

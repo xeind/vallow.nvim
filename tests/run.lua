@@ -1112,6 +1112,30 @@ table.insert(steps, function(next_step)
   local _, empty = fix._lines({ fixes = {} }, root)
   eq("fix: nothing to fix", empty, 0)
   eq("fix: no blockers", #fix._blockers({}), 0)
+
+  -- Skipped entries are listed apart and never counted as fixes.
+  local mixed = {
+    fixes = {
+      { type = "remove_export", path = "src/a.ts", line = 7, name = "unusedFn" },
+      { type = "remove_dependency", package = "lodash", file = "package.json", skipped = true, skip_reason = "low_confidence_incomplete_analysis" },
+      { type = "skipped", path = "src/b.ts", skipped = true, skip_reason = "low_confidence_incomplete_analysis" },
+    },
+    skipped_low_confidence_exports = 1,
+    skipped_low_confidence_dependencies = 1,
+  }
+  local mb, mtotal, mreasons = fix._lines(mixed, root)
+  eq("fix: mixed counts only applicable", mtotal, 1)
+  ok("fix: mixed footer", has_line(mb.lines, "1 fix ·"), vim.inspect(mb.lines))
+  ok("fix: skipped section", has_line(mb.lines, "^  Skipped$"))
+  ok("fix: skipped row has reason", has_line(mb.lines, "src/b%.ts  %(low confidence incomplete analysis%)"))
+  ok("fix: no blank skipped row", not has_line(mb.lines, "^    skipped  "))
+  ok("fix: reasons", vim.deep_equal(mreasons, { "low confidence incomplete analysis" }), vim.inspect(mreasons))
+  local allskip = { fixes = { mixed.fixes[2], mixed.fixes[3] } }
+  local ab, atotal = fix._lines(allskip, root)
+  eq("fix: all skipped offers nothing", atotal, 0)
+  ok("fix: all skipped no footer", not has_line(ab.lines, "rewrites these files"))
+  eq("fix: skipped total sums counters", fix._skipped_total(mixed), 2)
+  eq("fix: skipped total legacy", fix._skipped_total({ skipped = 3 }), 3)
   eq(
     "fix: type-aware timeout blocks",
     #fix._blockers({ _meta = { type_aware = { warnings = { "semantic pass timed out" } } } }),
@@ -1126,7 +1150,18 @@ table.insert(steps, function(next_step)
       if job_ok and type(data) == "table" then
         eq("fix: dry_run flag", data.dry_run, true)
         local lines = fix._lines(data, root).lines
-        ok("fix: dry run lists unusedFn", has_line(lines, "unusedFn"), vim.inspect(lines))
+        local _, applicable = fix._lines(data, root)
+        local want = 0
+        for _, f in ipairs(data.fixes or {}) do
+          if not f.skipped then
+            want = want + 1
+          end
+        end
+        eq("fix: dry run counts only unskipped fixes", applicable, want)
+        ok("fix: dry run has no blank skipped row", not has_line(lines, "^    %s*-?%s*skipped%s*$"), vim.inspect(lines))
+        if want == 0 and #(data.fixes or {}) > 0 then
+          ok("fix: dry run shows skipped section", has_line(lines, "^  Skipped$"), vim.inspect(lines))
+        end
       end
       next_step()
     end)
