@@ -56,7 +56,9 @@ table.insert(steps, function(next_step)
     eq("combined: unused_deps", count(results, "unused_deps"), 1)
     eq("combined: unresolved_imports", count(results, "unresolved_imports"), 1)
     ok("combined: version", (results.version or ""):match("^3%.%d+%.") ~= nil, tostring(results.version))
-    eq("combined: notices", #(results.notices or {}), 1)
+    -- skipped-source-dotdir (.claude) and node-modules-missing; the two
+    -- *-not-configured entries do not degrade analysis and are dropped.
+    eq("combined: notices", #(results.notices or {}), 2)
     ok(
       "combined: repo_root",
       vim.fn.fnamemodify(results.repo_root or "", ":p"):find("tests/fixture", 1, true) ~= nil,

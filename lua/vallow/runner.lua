@@ -785,7 +785,11 @@ M._normalize = function(raw, root)
   end
   for _, env in ipairs({ raw, check, dupes_raw, health_raw }) do
     for _, d in ipairs(env.workspace_diagnostics or {}) do
-      notice(d.message or ((d.kind or "diagnostic") .. ": " .. (d.path or "")))
+      -- v3.27+ omits degrades_analysis when false (e.g. boundaries-not-configured),
+      -- so only entries that set it true are shown. Older fallow never sets it.
+      if d.degrades_analysis then
+        notice(d.message or ((d.kind or "diagnostic") .. ": " .. (d.path or "")))
+      end
     end
     local ta = env._meta and env._meta.type_aware
     for _, w in ipairs(ta and ta.warnings or {}) do
