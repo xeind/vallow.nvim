@@ -413,6 +413,7 @@ M._normalize = function(raw, root)
       kind = kind,
       actions = item.actions,
       introduced = item.introduced,
+      effective_severity = item.effective_severity,
     })
   end
   for _, v in ipairs(check.unused_exports or {}) do
@@ -487,6 +488,7 @@ M._normalize = function(raw, root)
       lnum = v.line or 1,
       actions = v.actions,
       introduced = v.introduced,
+      effective_severity = v.effective_severity,
     })
   end
   -- Unlisted deps: fallow may not include a file path (package-level finding).
@@ -504,6 +506,7 @@ M._normalize = function(raw, root)
       lnum = v.line or 1,
       actions = v.actions,
       introduced = v.introduced,
+      effective_severity = v.effective_severity,
     })
   end
   findings.unresolved_imports.count = #findings.unresolved_imports.items
@@ -549,6 +552,7 @@ M._normalize = function(raw, root)
       path = first.path or "",
       lnum = first.lnum or 1,
       introduced = v.introduced,
+      effective_severity = v.effective_severity,
     })
   end
   findings.duplicate_exports.count = #findings.duplicate_exports.items
@@ -592,6 +596,7 @@ M._normalize = function(raw, root)
       edges = edges,
       actions = v.actions,
       introduced = v.introduced,
+      effective_severity = v.effective_severity,
     })
   end
   findings.circular_deps.count = #findings.circular_deps.items
@@ -686,6 +691,7 @@ M._normalize = function(raw, root)
       col = v.col or 0,
       actions = v.actions,
       introduced = v.introduced,
+      effective_severity = v.effective_severity,
     })
   end
   findings.dev_dep_in_prod.count = #findings.dev_dep_in_prod.items
@@ -769,6 +775,7 @@ M._normalize = function(raw, root)
       cognitive = v.cognitive,
       exceeded = v.exceeded,
       introduced = v.introduced,
+      effective_severity = v.effective_severity,
       actions = v.actions,
     })
   end

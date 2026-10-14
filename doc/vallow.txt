@@ -386,6 +386,10 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
 
       -- Per finding category: turn it off, or change its severity.
       -- severity is "error" | "warn" | "info" | "hint".
+      -- Without a severity here, a finding with fallow `effective_severity`
+      -- "warn" (set by fallow's rules and overrides) is capped at warn.
+      -- "error" is fallow's default and changes nothing. A severity set
+      -- here always wins.
       categories = {
         unused_exports       = { enabled = true, severity = "hint" },
         unused_types         = { enabled = true, severity = "hint" },

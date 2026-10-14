@@ -63,14 +63,25 @@ local SEVERITY_BY_NAME = {
 }
 
 -- Severity for a category after config.diagnostics.categories overrides.
--- Returns nil when the category is turned off.
-local function severity_for(cat_key, dcfg)
+-- Returns nil when the category is turned off. An explicit config severity wins.
+-- Otherwise fallow's per-finding `effective_severity` can lower the static default:
+-- "warn" caps it at WARN. "error" is fallow's default gate on every rule, so it
+-- never raises a hint to an error. (Larger vim severity numbers are less severe.)
+local function severity_for(cat_key, dcfg, item)
   local cat = (dcfg.categories or {})[cat_key]
   if cat and cat.enabled == false then
     return nil
   end
   local name = cat and cat.severity
-  return (name and SEVERITY_BY_NAME[tostring(name):lower()]) or SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+  local configured = name and SEVERITY_BY_NAME[tostring(name):lower()]
+  if configured then
+    return configured
+  end
+  local default = SEVERITY[cat_key] or vim.diagnostic.severity.HINT
+  if item and item.effective_severity == "warn" then
+    return math.max(default, vim.diagnostic.severity.WARN)
+  end
+  return default
 end
 
 -- Virtual text is a namespace option, so it applies to our diagnostics only.
@@ -171,7 +182,7 @@ M.apply = function(findings)
       local lbl = LABEL[cat_key] or cat_key
       for _, item in ipairs(bucket.items) do
         local msg = (item.name and item.name ~= "") and (lbl .. ": " .. item.name) or lbl
-        add(item.path, item.lnum, item.col or 0, msg, sev, cat_key, item)
+        add(item.path, item.lnum, item.col or 0, msg, severity_for(cat_key, dcfg, item), cat_key, item)
       end
     end
   end
@@ -258,7 +269,7 @@ M.apply_buf = function(bufnr, findings)
             lnum = math.max(0, (item.lnum or 1) - 1),
             col = item.col or 0,
             message = msg,
-            severity = sev,
+            severity = severity_for(cat_key, dcfg, item),
             source = "fallow",
             user_data = { vallow = { category = cat_key, item = item } },
           })

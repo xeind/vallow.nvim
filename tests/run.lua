@@ -1436,6 +1436,74 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 29. Normalizer: package_cycles, deprecated_exports_in_use, effective_severity in diagnostics.
+table.insert(steps, function(next_step)
+  local root = vim.fn.getcwd()
+  local results = require("vallow.runner")._normalize({
+    package_cycles = {
+      {
+        packages = { "@r/a", "@r/b" },
+        package_roots = { "packages/a", "packages/b" },
+        edges = { { path = "packages/a/src/i.ts", line = 4, col = 2, type_only = true }, {} },
+        group_truncated = true,
+      },
+      {},
+    },
+    deprecated_exports_in_use = {
+      {
+        path = "src/old.ts",
+        export_name = "legacy",
+        line = 7,
+        col = 0,
+        deprecated_reason = "use modern",
+        consumer_count = 2,
+        consumers = { { path = "src/use.ts", line = 1, col = 0, kind = "import" } },
+        public_api = false,
+        effective_severity = "error",
+      },
+    },
+    circular_dependencies = { { files = { "a.ts", "b.ts" }, edges = { { path = "a.ts", line = 2 } }, effective_severity = "warn" } },
+  }, root)
+  local pc
+  for _, it in ipairs(results.findings.package_cycles.items) do
+    pc = pc or (#it.packages > 0 and it or nil)
+  end
+  eq("package_cycles: count (empty entry tolerated)", count(results, "package_cycles"), 2)
+  eq("package_cycles: name", pc.name, "@r/a \u{2192} @r/b")
+  eq("package_cycles: path", pc.relative_path, "packages/a/src/i.ts")
+  eq("package_cycles: lnum", pc.lnum, 4)
+  eq("package_cycles: type_only", pc.edges[1].type_only, true)
+  eq("package_cycles: truncated", pc.group_truncated, true)
+  local dep = results.findings.deprecated_exports_in_use.items[1]
+  eq("deprecated: name", dep.name, "legacy")
+  eq("deprecated: path", dep.relative_path, "src/old.ts")
+  eq("deprecated: lnum", dep.lnum, 7)
+  eq("deprecated: reason", dep.reason, "use modern")
+  eq("deprecated: consumers", #dep.consumers, 1)
+  eq("deprecated: severity passthrough", dep.effective_severity, "error")
+  eq("explain: deprecated type", require("vallow.explain").issue_type("deprecated_exports_in_use"), "deprecated-export-in-use")
+
+  -- effective_severity "warn" lowers an error default to warn, unless the user set one.
+  local sev = vim.diagnostic.severity
+  vim.cmd("edit " .. vim.fn.fnameescape(dep.path))
+  local buf = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "a", "b" })
+  local function dev_dep(eff)
+    return { dev_dep_in_prod = { count = 1, items = { { path = dep.path, lnum = 1, name = "x", effective_severity = eff } } } }
+  end
+  local ns = require("vallow.diagnostics").ns
+  require("vallow").setup({})
+  require("vallow.diagnostics").apply(dev_dep("warn"))
+  eq("diag: effective warn lowers error", vim.diagnostic.get(buf, { namespace = ns })[1].severity, sev.WARN)
+  require("vallow.diagnostics").apply(dev_dep("error"))
+  eq("diag: effective error keeps default", vim.diagnostic.get(buf, { namespace = ns })[1].severity, sev.ERROR)
+  require("vallow").setup({ diagnostics = { categories = { dev_dep_in_prod = { severity = "hint" } } } })
+  require("vallow.diagnostics").apply(dev_dep("warn"))
+  eq("diag: explicit config wins", vim.diagnostic.get(buf, { namespace = ns })[1].severity, sev.HINT)
+  vim.cmd("bwipeout! " .. buf)
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

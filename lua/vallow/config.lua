@@ -174,7 +174,8 @@ M.defaults = {
     virtual_lines = false,
     current_buffer_only = false, -- true pushes diagnostics to the current buffer only
     -- Per finding category: turn it off, or change its severity
-    -- ("error" | "warn" | "info" | "hint").
+    -- ("error" | "warn" | "info" | "hint"). Without a severity here, a finding
+    -- with fallow `effective_severity` "warn" is capped at warn; otherwise vallow's default applies.
     categories = {
       unused_exports = { enabled = true },
       unused_types = { enabled = true },
