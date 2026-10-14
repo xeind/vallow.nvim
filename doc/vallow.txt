@@ -753,6 +753,10 @@ Checks performed:
   • fallow-lsp is found in PATH (optional, for LSP code actions via ga).
   • A package.json (or workspace marker) is detected from the current
     buffer or working directory.
+  • `fallow doctor` results (fallow 3.23 or newer), one line per check:
+    project root, resolved config, workspaces, plugins, type-aware
+    companion, and caches. Failed checks show as errors, warnings as
+    warnings. Older fallow versions skip this step.
 
 If the health check cannot find a project root, vallow will return empty
 results when you open the panel. Make sure you open Neovim from inside a

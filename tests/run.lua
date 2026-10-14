@@ -1365,6 +1365,34 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 30. health: fallow doctor report mapping and real run
+table.insert(steps, function(next_step)
+  local health =require("vallow.health")
+  local reports = health._doctor_report({
+    checks = {
+      { id = "root", status = "pass", message = "ok msg" },
+      { id = "dependencies", status = "warn", message = "no modules", remediation = { command = "npm install" } },
+      { id = "config", status = "fail", message = "bad config" },
+      { id = "type-aware", status = "skipped", message = "off" },
+      { id = "future", status = "mystery", message = "ignored" },
+      "garbage",
+    },
+  })
+  eq("doctor: count", #reports, 4)
+  eq("doctor: pass", reports[1].level, "ok")
+  eq("doctor: warn", reports[2].level, "warn")
+  eq("doctor: warn remediation", reports[2].message:find("npm install", 1, true) ~= nil, true)
+  eq("doctor: fail", reports[3].level, "error")
+  eq("doctor: skipped", reports[4].level, "info")
+  eq("doctor: malformed", #health._doctor_report(nil), 0)
+  local runner = require("vallow.runner")
+  local root = runner.find_root()
+  local bin = runner.resolve_cmd(root)
+  local data = health._run_doctor(bin, root)
+  eq("doctor: real run has status", type(data) == "table" and type(data.status) == "string", true)
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
