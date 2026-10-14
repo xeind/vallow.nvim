@@ -611,8 +611,8 @@ M._normalize = function(raw, root)
   end
   findings.boundary_violations.count = #findings.boundary_violations.items
 
-  -- dev_dependency_in_production[] (v3.1+)
-  for _, v in ipairs(check.dev_dependency_in_production or {}) do
+  -- dev_dependencies_in_production[] (v3.1+)
+  for _, v in ipairs(check.dev_dependencies_in_production or {}) do
     table.insert(findings.dev_dep_in_prod.items, {
       name = v.package_name or v.packageName or v.package or "",
       path = abs(v.path or ""),
