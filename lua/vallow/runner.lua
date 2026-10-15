@@ -354,7 +354,7 @@ M._job = function(cmd, cwd, callback)
 end
 
 -- Normalize fallow JSON → output contract.
--- Combined output: raw.dead_code / raw.duplication / raw.health
+-- Combined output: raw.check / raw.dupes / raw.health
 -- Separate output: flat at top level (kind != "combined")
 M._normalize = function(raw, root)
   local findings = M._empty_findings()
@@ -362,6 +362,7 @@ M._normalize = function(raw, root)
 
   local check, dupes_raw, health_raw
   if raw.kind == "combined" then
+    -- fallow 3.x emits check/dupes; dead_code/duplication are fallbacks for older fallow
     check = raw.dead_code or raw.check or {}
     dupes_raw = raw.duplication or raw.dupes or {}
     health_raw = raw.health or {}
@@ -382,7 +383,8 @@ M._normalize = function(raw, root)
     return p:gsub("^" .. vim.pesc(root) .. "/", "")
   end
 
-  -- abs: ensure path is absolute (fallow outputs relative paths for some categories)
+  -- abs: ensure path is absolute (fallow 3.29+ emits root-relative paths; older
+  -- versions mixed absolute and relative)
   local function abs(p)
     if not p or p == "" then
       return ""
@@ -513,12 +515,12 @@ M._normalize = function(raw, root)
   findings.unlisted_deps.count = #findings.unlisted_deps.items
 
   -- duplicate_exports[]
-  -- Schema v7 (docs): { path: abs, line, export_name, duplicate_locations: [{path,line,col}] }
-  -- Live format:       { export_name, locations: [{path: rel, line, col}] }
+  -- fallow 3.x: { export_name, locations: [{path: rel, line, col}] }
+  -- Older fallow: { path, line, export_name, duplicate_locations: [{path,line,col}] }
   for _, v in ipairs(check.duplicate_exports or {}) do
     local locs = {}
     if v.path and v.path ~= "" then
-      -- Schema v7: primary location at top level, rest in duplicate_locations
+      -- Older fallow: primary location at top level, rest in duplicate_locations
       table.insert(locs, {
         path = abs(v.path),
         relative_path = rel(abs(v.path)),
@@ -534,7 +536,7 @@ M._normalize = function(raw, root)
         })
       end
     else
-      -- Live format: all locations in one array
+      -- fallow 3.x: all locations in one array
       for _, loc in ipairs(v.locations or v.duplicate_locations or v.duplicateLocations or {}) do
         local loc_path = loc.path or ""
         table.insert(locs, {
@@ -558,18 +560,18 @@ M._normalize = function(raw, root)
   findings.duplicate_exports.count = #findings.duplicate_exports.items
 
   -- circular_dependencies[]
-  -- Schema v7 (docs): { path: abs, cycle: [abs, ...] }
-  -- Live format:       { files: [rel, ...], edges: [{path, line, col}, ...], line, col }
+  -- fallow 3.x: { files: [rel, ...], edges: [{path, line, col}, ...], line, col }
+  -- Older fallow: { path, cycle: [path, ...] }
   for _, v in ipairs(check.circular_dependencies or {}) do
     local raw_path, cycle, lnum, col
     if v.path and v.path ~= "" then
-      -- Schema v7 format
+      -- Older fallow format
       raw_path = v.path
       cycle = v.cycle or {}
       lnum = v.line or 1
       col = v.col or 0
     else
-      -- Live format
+      -- fallow 3.x format
       local edges = v.edges or {}
       local entry = edges[1] or {}
       raw_path = entry.path or (v.files and v.files[1]) or ""
@@ -733,9 +735,10 @@ M._normalize = function(raw, root)
   findings.raw_style_value.count = #findings.raw_style_value.items
 
   -- clone_groups[] from dupes
-  -- Live fallow uses several field-name variants across versions:
-  --   path: "path" | "file" | "file_path" | "filePath"
-  --   line: "line" | "lineStart" | "line_start" | "start_line"
+  -- fallow 3.x instances use file, start_line, end_line, start_col, end_col.
+  -- The other names are fallbacks for older fallow:
+  --   path: "path" | "file_path" | "filePath"
+  --   line: "line" | "lineStart" | "line_start"
   for _, g in ipairs(dupes_raw.clone_groups or {}) do
     local locs = {}
     for _, inst in ipairs(g.instances or {}) do
