@@ -124,16 +124,23 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   each fallow release could fail it with no change here. `make test` and
   `make lint` run locally.
 
-## Batch 7 — open
+## Batch 7 — done
 
-- **Unused-file cascade.** fallow 3.33 hides findings inside unused files.
-  Decide: pass `--show-cascade`, or show the hidden count in the header.
-- **Stable finding ids.** Key the cache and diagnostics on `finding_id`.
-  Raises the minimum to fallow 3.31.
-- **Importer counts.** Dim `N importers` virtual text on exports, from
-  `fallow inspect`.
-- **Introduced-only diagnostics.** An option to show diagnostics only for
-  findings the branch introduced, from audit mode's `introduced` flag.
+- **Unused-file cascade.** fallow 3.33 hides findings inside unused files
+  and reports `cascade_hidden`. The panel header shows the count. vallow
+  does not pass `--show-cascade`: deleting the file removes those findings.
+
+## Deferred
+
+- **Stable finding ids.** Nothing in vallow needs `finding_id` yet, and
+  using it raises the minimum to fallow 3.31. Pick it up with the first
+  feature that tracks a finding across runs.
+- **Importer counts.** `fallow inspect` gives `reference_count` per export
+  but no line, except for unused exports. Matching names against the
+  buffer breaks on `export { a, b }`, re-exports and default exports.
+  Revisit if fallow adds `line` to `trace_file.exports[]`.
+- **Introduced-only diagnostics.** Only audit runs carry `introduced`, and
+  audit diagnostics already cover only the changed files.
 
 ## Conventions
 
