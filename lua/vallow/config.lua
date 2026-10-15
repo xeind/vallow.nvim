@@ -8,6 +8,8 @@ M.defaults = {
 
   -- Which analyses to run. Remove entries to skip them entirely.
   -- "health" automatically adds --score --hotspots --targets to fallow.
+  -- Add "flags" to list feature flags old enough to retire (fallow 3.30+; one
+  -- extra process per run, skipped silently on older fallow).
   analyses = { "dead-code", "dupes", "health" },
 
   statusline = {
@@ -131,6 +133,7 @@ M.defaults = {
     health_complexity = { icon = "ƒ", label = "Complexity", section = "health", order = 1, severity = "warn" },
     health_hotspots = { icon = "󱐋", label = "Hotspot Candidates", section = "health", order = 2, severity = "hint" },
     health_targets = { icon = "↑", label = "Refactoring", section = "health", order = 3, severity = "hint" },
+    stale_flags = { icon = "󰈻", label = "Stale Flags", section = "health", order = 4, severity = "hint" },
     -- ARCHITECTURE
     boundary_violations = {
       icon = "󰑷",

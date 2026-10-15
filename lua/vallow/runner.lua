@@ -114,6 +114,7 @@ M.run = function(callback)
     end)
     return
   end
+  callback = M._with_stale_flags(callback, bin, root, cfg, gen)
   local stdout, stderr = {}, {}
 
   -- Combined mode: plain fallow run.
@@ -916,6 +917,96 @@ M._normalize = function(raw, root)
   }
 end
 
+-- fallow 3.30 added `fallow flags --retirement`.
+local FLAGS_MIN_VERSION = { 3, 30, 0 }
+
+-- True when `version` can run `flags --retirement`. An unknown version passes;
+-- the job then fails quietly on a fallow that lacks the option.
+M._flags_supported = function(version)
+  local parsed = version and vim.version.parse(tostring(version))
+  return not parsed or vim.version.cmp(parsed, FLAGS_MIN_VERSION) >= 0
+end
+
+-- `fallow flags --retirement` JSON → findings bucket { count, items }. One item
+-- per retirement candidate, in the order fallow reports them (oldest first).
+-- Jump target: the flag definition, else its first site.
+M._normalize_flags = function(raw, root)
+  local bucket = { count = 0, items = {} }
+  local report = type(raw) == "table" and raw.retirement
+  if type(report) ~= "table" or type(report.flags) ~= "table" then
+    return bucket
+  end
+  for _, f in ipairs(report.flags) do
+    if type(f) == "table" and type(f.flag_name) == "string" and type(f.reasons) == "table" and #f.reasons > 0 then
+      local sites = type(f.sites) == "table" and f.sites or {}
+      local site
+      for _, s in ipairs(sites) do
+        if type(s) == "table" and type(s.path) == "string" then
+          if s.role == "definition" then
+            site = s
+            break
+          end
+          site = site or s
+        end
+      end
+      local rel = site and site.path or ""
+      local reasons = {}
+      for _, r in ipairs(f.reasons) do
+        if type(r) == "string" then
+          table.insert(reasons, r)
+        end
+      end
+      table.insert(bucket.items, {
+        name = f.flag_name,
+        kind = f.kind,
+        path = (rel == "" or rel:sub(1, 1) == "/") and rel or (root .. "/" .. rel),
+        relative_path = rel,
+        lnum = site and tonumber(site.line) or 1,
+        col = site and tonumber(site.col) or 0,
+        age_days = tonumber(f.age_days),
+        reasons = reasons,
+        site_count = #sites,
+      })
+    end
+  end
+  bucket.count = #bucket.items
+  return bucket
+end
+
+-- Wraps `callback` so a finished run also fetches the stale flags. Opt-in via
+-- "flags" in `analyses`. It costs one more fallow process (git blame for the
+-- flag ages), so it never runs by default. Failure or fallow < 3.30 leaves
+-- findings.stale_flags unset with no notice.
+M._with_stale_flags = function(callback, bin, root, cfg, gen)
+  if not vim.tbl_contains(cfg.analyses or {}, "flags") then
+    return callback
+  end
+  return function(results)
+    if results.error or not M._flags_supported(results.version) then
+      callback(results)
+      return
+    end
+    local cmd = { bin, "flags", "--retirement", "--format", "json", "--quiet" }
+    if require("vallow.panel").state.production then
+      table.insert(cmd, "--production")
+    end
+    for _, a in ipairs(cfg.fallow_args or {}) do
+      table.insert(cmd, a)
+    end
+    _track(M._job(cmd, root, function(ok, data)
+      vim.schedule(function()
+        if gen ~= _gen then
+          return
+        end
+        if ok and type(data) == "table" then
+          results.findings.stale_flags = M._normalize_flags(data, root)
+        end
+        callback(results)
+      end)
+    end))
+  end
+end
+
 -- Base ref for `:Vallow audit` when the user names none.
 M.default_base = function(root)
   local out = vim.fn.systemlist({ "git", "-C", root, "rev-parse", "--verify", "--quiet", "main" })
@@ -1045,6 +1136,7 @@ M._empty_findings = function()
     health_complexity = { count = 0, items = {} },
     health_hotspots = { count = 0, items = {} },
     health_targets = { count = 0, items = {} },
+    stale_flags = { count = 0, items = {} },
     health_score = nil,
   }
 end

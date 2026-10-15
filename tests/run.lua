@@ -1796,6 +1796,97 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 39. Stale Flags: `fallow flags --retirement` normalizer, version gate, panel rows, and an opt-in real run.
+table.insert(steps, function(next_step)
+  local runner = require("vallow.runner")
+  local root = vim.fn.getcwd()
+  local raw = {
+    retirement = {
+      age_mode = "blame",
+      flags = {
+        {
+          flag_name = "FEATURE_OLD_UI",
+          kind = "environment_variable",
+          age_days = 412,
+          reasons = { "single-read-site", "test-only" },
+          sites = {
+            { path = "src/b.ts", line = 9, col = 4, role = "read" },
+            { path = "src/flags.ts", line = 2, col = 0, role = "definition" },
+          },
+        },
+        {
+          flag_name = "newCheckout",
+          kind = "sdk_call",
+          age_days = vim.NIL, -- JSON null when git gives no age
+          reasons = { "defined-never-read" },
+          sites = { { path = "src/c.ts", line = 5, col = 1, role = "read" } },
+        },
+        { flag_name = "NOT_A_CANDIDATE", reasons = {}, sites = {} },
+        { flag_name = 7, reasons = { "x" } },
+        "junk",
+      },
+    },
+  }
+  local bucket = runner._normalize_flags(raw, root)
+  eq("flags: candidates only", bucket.count, 2)
+  local first, second = bucket.items[1], bucket.items[2]
+  eq("flags: name", first.name, "FEATURE_OLD_UI")
+  eq("flags: age", first.age_days, 412)
+  eq("flags: definition wins over earlier read", first.relative_path, "src/flags.ts")
+  eq("flags: absolute path", first.path, root .. "/src/flags.ts")
+  eq("flags: line", first.lnum, 2)
+  eq("flags: reasons", table.concat(first.reasons, ","), "single-read-site,test-only")
+  eq("flags: site count", first.site_count, 2)
+  eq("flags: no age is nil", second.age_days, nil)
+  eq("flags: first site without definition", second.relative_path, "src/c.ts")
+  eq("flags: nil input", runner._normalize_flags(nil, root).count, 0)
+  eq("flags: no retirement block", runner._normalize_flags({ feature_flags = {} }, root).count, 0)
+  eq("flags: flags not a table", runner._normalize_flags({ retirement = { flags = "x" } }, root).count, 0)
+
+  eq("flags: 3.29 unsupported", runner._flags_supported("3.29.0"), false)
+  eq("flags: 3.30 supported", runner._flags_supported("3.30.0"), true)
+  eq("flags: 3.33 supported", runner._flags_supported("3.33.1"), true)
+  eq("flags: unknown version tries", runner._flags_supported(nil), true)
+
+  -- Panel: the category sits in HEALTH and each row shows name, age and file:line.
+  local findings = runner._empty_findings()
+  findings.stale_flags = bucket
+  local results = { repo_root = root, version = "3.33.1", duration_ms = 1, findings = findings }
+  local lines = render_lines(results)
+  local open_buf = vim.api.nvim_create_buf(false, true)
+  vim.b[open_buf].vallow_open_cats = { stale_flags = true }
+  require("vallow.panel.render").render(open_buf, results, nil)
+  local open_lines = vim.api.nvim_buf_get_lines(open_buf, 0, -1, false)
+  require("vallow.panel.render").clear(open_buf)
+  vim.api.nvim_buf_delete(open_buf, { force = true })
+  ok("flags: HEALTH section", has_line(lines, "HEALTH%s+2"), vim.inspect(lines))
+  ok("flags: category header", has_line(lines, "Stale Flags%s+2"), vim.inspect(lines))
+  ok("flags: row name, age, location", has_line(open_lines, "FEATURE_OLD_UI%s+412d%s+src/flags%.ts:2"), vim.inspect(open_lines))
+  ok("flags: row without age", has_line(open_lines, "newCheckout%s+–%s+src/c%.ts:5"), vim.inspect(open_lines))
+  eq("flags: empty bucket draws nothing", has_line(render_lines({ repo_root = root, version = "x", findings = runner._empty_findings() }), "Stale Flags"), false)
+  eq("flags: absent bucket draws nothing", has_line(render_lines({ repo_root = root, version = "x", findings = { unused_files = { count = 0, items = {} } } }), "Stale Flags"), false)
+
+  -- Real run, default analyses: the flags job does not run, so the bucket stays empty.
+  require("vallow").setup({})
+  runner.run(function(plain)
+    eq("flags: off by default", plain.findings.stale_flags.count, 0)
+    -- Opt in. On fallow < 3.30 the bucket stays at its empty default and no notice or error appears.
+    require("vallow").setup({ analyses = { "dead-code", "dupes", "health", "flags" } })
+    runner.run(function(results)
+      ok("flags: opt-in run no error", not results.error, tostring(results.error))
+      local supported = runner._flags_supported(results.version)
+      local b = results.findings.stale_flags
+      ok("flags: opt-in bucket is a table", type(b) == "table" and type(b.items) == "table", vim.inspect(b))
+      eq("flags: count matches items", b.count, #b.items)
+      local notice_text = table.concat(results.notices or {}, "\n")
+      ok("flags: no flags notice", not notice_text:lower():find("retirement", 1, true), notice_text)
+      print("flags: fallow " .. tostring(results.version) .. ", supported=" .. tostring(supported) .. ", candidates=" .. b.count)
+      require("vallow").setup({})
+      next_step()
+    end)
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

@@ -848,6 +848,39 @@ M._render_items = function(cat_key, items, push, hl_last, win_width)
         end
       end
     end
+  elseif cat_key == "stale_flags" then
+    -- name | age | file:line of the definition (else the first site)
+    local name_w = 4 -- "flag"
+    for _, it in ipairs(items) do
+      name_w = math.max(name_w, #(it.name or ""))
+    end
+    name_w = math.min(name_w, 28)
+    local age_w = 5
+    local gap = "  "
+    push(
+      indent .. M._dpad("flag", name_w) .. gap .. M._dpad("age", age_w) .. gap .. "location",
+      0,
+      -1,
+      "VallowKind",
+      nil
+    )
+    for _, item in ipairs(items) do
+      local name = M._truncate(item.name or "", name_w)
+      local age = item.age_days and (item.age_days .. "d") or "–"
+      local rp = item.relative_path or ""
+      local ln = (rp ~= "" and item.lnum) and (":" .. item.lnum) or ""
+      local row = indent .. M._dpad(name, name_w) .. gap
+      local age_pos = #row
+      row = row .. M._dpad(age, age_w) .. gap
+      local loc_pos = #row
+      row = row .. rp .. ln
+      push(row, #indent, #indent + #name, "VallowName", item)
+      hl_last(age_pos, age_pos + #age, "VallowCount")
+      hl_last(loc_pos, loc_pos + #rp, "VallowPath")
+      if ln ~= "" then
+        hl_last(loc_pos + #rp, loc_pos + #rp + #ln, "VallowKind")
+      end
+    end
   elseif cat_key == "health_targets" then
     -- Map a priority value to a diagnostic highlight group.
     -- Uses DiagnosticError/Warn/Hint — always themed by the active colorscheme.

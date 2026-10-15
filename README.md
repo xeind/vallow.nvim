@@ -142,10 +142,17 @@ Sections and categories shown only when they have findings.
 | **UNUSED CODE** | Unused Exports, Types, Members, Files, Dependencies, Misplaced Deps, Unlisted Deps |
 | **ISSUES** | Unresolved Imports, Circular Deps, Package Cycles, Duplicate Exports, Stale Suppressions, Deprecated In Use |
 | **DUPLICATES** | Clone Groups |
-| **HEALTH** | Complexity, Hotspots, Refactoring Targets |
+| **HEALTH** | Complexity, Hotspots, Refactoring Targets, Stale Flags (opt-in) |
 | **ARCHITECTURE** | Boundary Violations |
 
 Severity is color-coded: errors red, warnings yellow, hints grey.
+
+Stale Flags lists feature flags old enough to delete, from
+`fallow flags --retirement` (fallow 3.30 and later). Each row shows the flag
+name, its age in days from git, and the file and line of its definition.
+`<CR>` jumps there. The report costs one extra fallow process per run (git
+blame for the ages), so it is off by default. Add `"flags"` to `analyses` to
+turn it on. On an older fallow the category stays empty, with no notice.
 
 fallow 3.33 and later hides unused exports, types, and members inside a file
 that is itself unused. The panel header shows a dim "N findings hidden in
@@ -168,6 +175,7 @@ require("vallow").setup({
   env         = {},  -- extra env for fallow, e.g. { FALLOW_TYPE_AWARE_TIMEOUT_SECS = "300" }
 
   -- Which analyses to run. Remove entries to skip them entirely.
+  -- Add "flags" for the Stale Flags category (fallow 3.30+, one extra process).
   analyses = { "dead-code", "dupes", "health" },
 
   -- Reorder tabs. Omitted sections keep their default order after listed ones.

@@ -389,6 +389,7 @@ Pass options to |vallow.setup()|. All keys are optional. >lua
     --   "dead-code"  →  Unused Code + Issues + Architecture sections
     --   "dupes"      →  Duplicates section
     --   "health"     →  Health section (score, hotspots, targets)
+    --   "flags"      →  Stale Flags category (opt-in; fallow 3.30+)
     analyses = { "dead-code", "dupes", "health" },
 
     -- Panel window position and size.
@@ -594,6 +595,13 @@ HEALTH ~
 
   Refactoring           Ranked list of refactoring targets with a
                         recommendation and priority.
+
+  Stale Flags           Feature flags old enough to retire, from
+                        `fallow flags --retirement`. Columns: flag, age in
+                        days (git blame, a lower bound), file:line of the
+                        definition. Opt-in: add "flags" to `analyses`. It
+                        runs one extra fallow process per refresh. Needs
+                        fallow 3.30; older fallow shows nothing, no notice.
 
   Score                 Overall project health score (0-100) and grade,
                         shown at the top of the Health section.
