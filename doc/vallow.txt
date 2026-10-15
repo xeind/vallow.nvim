@@ -310,6 +310,13 @@ ACTIONS ~
   q         Close the vallow panel.
   ?         Open the quick-help float.
 
+HIDDEN FINDINGS ~
+
+fallow 3.33 and later hides unused exports, types, and members in a file
+that is itself unused, and reports the count as `cascade_hidden`. The panel
+header then shows "N findings hidden in unused files". Nothing shows when
+the count is zero or fallow is older. vallow does not pass `--show-cascade`.
+
 ==============================================================================
 6. CONFIGURATION                                          *vallow-config*
 

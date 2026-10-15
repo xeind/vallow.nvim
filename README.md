@@ -145,6 +145,10 @@ Sections and categories shown only when they have findings.
 
 Severity is color-coded: errors red, warnings yellow, hints grey.
 
+fallow 3.33 and later hides unused exports, types, and members inside a file
+that is itself unused. The panel header shows a dim "N findings hidden in
+unused files" line with the count. Delete the file and the findings go too.
+
 ## Configuration
 
 ```lua

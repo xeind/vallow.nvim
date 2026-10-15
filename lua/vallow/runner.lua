@@ -871,11 +871,16 @@ M._normalize = function(raw, root)
     end
   end
 
+  -- cascade_hidden (v3.33+): exports and members hidden because their file is
+  -- unused. Lives on the dead-code envelope; absent when zero.
+  local cascade_hidden = type(check.cascade_hidden) == "number" and check.cascade_hidden or nil
+
   return {
     repo_root = root,
     duration_ms = elapsed,
     findings = findings,
     version = version,
+    cascade_hidden = cascade_hidden,
     notices = notices,
     error = nil,
   }

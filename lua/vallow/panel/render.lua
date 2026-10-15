@@ -119,6 +119,10 @@ M.render = function(buf, results, win)
     end
     push(info, 2, -1, "VallowSection")
   end
+  if (results.cascade_hidden or 0) > 0 then
+    local n = results.cascade_hidden
+    push(string.format("  %d finding%s hidden in unused files", n, n == 1 and "" or "s"), 2, -1, "VallowFooter")
+  end
   for _, text in ipairs(results.notices or {}) do
     -- Panel has nowrap, so wrap long advisory messages by hand.
     local first = true

@@ -1523,6 +1523,41 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 32. cascade_hidden: normalizer reads the count; panel header shows it only when > 0.
+table.insert(steps, function(next_step)
+  local runner = require("vallow.runner")
+  local root = vim.fn.getcwd()
+  eq("cascade: combined check envelope", runner._normalize({ kind = "combined", check = { cascade_hidden = 7 } }, root).cascade_hidden, 7)
+  eq("cascade: flat dead-code", runner._normalize({ cascade_hidden = 3 }, root).cascade_hidden, 3)
+  eq("cascade: absent is nil", runner._normalize({}, root).cascade_hidden, nil)
+
+  local panel = require("vallow.panel")
+  local function header_has(hidden, text)
+    panel.state.results = {
+      repo_root = root,
+      version = "3.33.1",
+      duration_ms = 5,
+      cascade_hidden = hidden,
+      findings = {
+        unused_files = {
+          count = 1,
+          items = { { relative_path = "src/a.ts", path = root .. "/src/a.ts", name = "x", lnum = 1, col = 0 } },
+        },
+      },
+    }
+    panel._bg_refresh = function() end
+    panel.open()
+    local lines = table.concat(vim.api.nvim_buf_get_lines(panel.state.buf, 0, -1, false), "\n")
+    panel.close()
+    return lines:find(text, 1, true) ~= nil
+  end
+  eq("cascade: header plural", header_has(5, "5 findings hidden in unused files"), true)
+  eq("cascade: header singular", header_has(1, "1 finding hidden in unused files"), true)
+  eq("cascade: header absent at 0", header_has(0, "hidden in unused files"), false)
+  eq("cascade: header absent at nil", header_has(nil, "hidden in unused files"), false)
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then
