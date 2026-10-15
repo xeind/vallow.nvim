@@ -164,13 +164,18 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   `?` in the panel gutter, " (incomplete analysis)" on the diagnostic, and
   the caveat in the K float.
 
-## Batch 10 — open
+## Batch 10 — done
 
-- **Stack trace to quickfix.** `fallow trace-error` (3.24) maps a pasted
-  stack trace to source locations.
-- **Current-buffer health.** `fallow health <path>` (3.25) for one file.
-- **Gate results.** `gate_outcomes` (3.29) pass/fail in the dashboard.
-- **Feature flags.** `fallow flags --retirement` (3.30) as a panel section.
+- **Stack trace to quickfix.** `:Vallow stacktrace` sends a selection or
+  the `+` register through `fallow trace-error` (3.24) and fills the
+  quickfix list. Ambiguous frames are marked; dependency frames are
+  skipped.
+- **Gate results.** The dashboard lists `gate_outcomes` (3.27+). vallow
+  runs without `--fail-on-issues`, so gates are dimmed and the heading
+  reads "Gates · not enforced" unless one is enforced.
+- **Stale Flags.** Add "flags" to `analyses` to run `fallow flags
+  --retirement` (3.30+) after each run. Rows show the flag, its age and
+  the definition site. Older fallow skips it without a notice.
 
 ## Deferred
 
@@ -181,6 +186,10 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   but no line, except for unused exports. Matching names against the
   buffer breaks on `export { a, b }`, re-exports and default exports.
   Revisit if fallow adds `line` to `trace_file.exports[]`.
+- **Current-buffer health.** `fallow health <path>` (3.25) takes about
+  0.1 s on the fixture, the same as a full run, because fallow still
+  builds the whole graph. `auto_refresh` already re-runs on save. Revisit
+  if a large project shows scoped runs are much faster.
 - **Introduced-only diagnostics.** Only audit runs carry `introduced`, and
   audit diagnostics already cover only the changed files.
 
