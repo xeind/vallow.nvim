@@ -910,6 +910,7 @@ M._normalize = function(raw, root)
     findings = findings,
     version = version,
     cascade_hidden = cascade_hidden,
+    gate_outcomes = type(raw.gate_outcomes) == "table" and raw.gate_outcomes or nil,
     notices = notices,
     error = nil,
   }

@@ -1701,6 +1701,40 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 38. gate_outcomes: normalizer carries it, dashboard draws a Gates block, nil omits it.
+table.insert(steps, function(next_step)
+  local runner = require("vallow.runner")
+  local dash = require("vallow.dashboard")
+  require("vallow").setup({})
+
+  local gates = {
+    ["error-severity-findings"] = { status = "fail", enforced = false, observed = 4.0, threshold_label = "error" },
+    ["health-findings"] = { status = "pass", enforced = false, observed = 0.0, threshold_label = "error" },
+    ["duplication-threshold"] = { status = "warn", enforced = false, observed = 7.5, threshold = 5.0 },
+    ["future-gate"] = { status = "skipped", enforced = false },
+  }
+  local norm = runner._normalize({ kind = "combined", gate_outcomes = gates }, "/tmp")
+  eq("gates: carried", norm.gate_outcomes, gates)
+  eq("gates: nil when absent", runner._normalize({ kind = "combined" }, "/tmp").gate_outcomes, nil)
+  eq("gates: null is nil", runner._normalize({ kind = "combined", gate_outcomes = vim.NIL }, "/tmp").gate_outcomes, nil)
+
+  local findings = { health_score = { score = 80, grade = "B", penalties = {} } }
+  local lines = dash._lines(findings, gates).lines
+  ok("gates: heading says not enforced", has_line(lines, "^  Gates · not enforced$"), vim.inspect(lines))
+  local enforced_lines = dash._lines(findings, { ["health-findings"] = { status = "fail", enforced = true } }).lines
+  ok("gates: enforced heading", has_line(enforced_lines, "^  Gates$"), vim.inspect(enforced_lines))
+  ok("gates: fail row", has_line(lines, "^    ✗ error%-severity%-findings%s+4 error$"), vim.inspect(lines))
+  ok("gates: pass row", has_line(lines, "^    ✓ health%-findings%s*$"), vim.inspect(lines))
+  ok("gates: warn row", has_line(lines, "^    ! duplication%-threshold%s+7%.5 / 5$"), vim.inspect(lines))
+  ok("gates: unknown gate", has_line(lines, "^    %- future%-gate%s*$"), vim.inspect(lines))
+
+  local bare = dash._lines(findings).lines
+  ok("gates: nil omits block", not has_line(bare, "Gates"), vim.inspect(bare))
+  local empty = dash._lines(findings, {}).lines
+  ok("gates: empty omits block", not has_line(empty, "Gates"), vim.inspect(empty))
+  next_step()
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

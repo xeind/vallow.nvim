@@ -75,7 +75,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 |---|---|
 | `:Vallow` | Toggle the panel |
 | `:Vallow health` | Open the panel on a section: `health`, `issues`, `duplicates`, `unused_code`, `architecture` |
-| `:Vallow dashboard` | Health dashboard float: score gauge, penalties, vital signs, trend |
+| `:Vallow dashboard` | Health dashboard float: score gauge, penalties, vital signs, trend, gate verdicts |
 | `:Vallow audit [ref]` | Review the files changed since `ref` (default `main`, else `master`) |
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
 | `:Vallow watch` | Toggle watch mode: one `fallow watch` process streams results on every file change |

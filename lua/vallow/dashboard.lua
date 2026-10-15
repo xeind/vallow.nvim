@@ -56,7 +56,11 @@ local function row(label, value)
   return "    " .. label .. string.rep(" ", pad) .. value
 end
 
-M._lines = function(findings)
+local GATE_MARKS = { pass = "✓", fail = "✗", warn = "!", skipped = "-" }
+local GATE_HLS = { pass = "VallowSevHint", fail = "VallowSevError", warn = "VallowSevWarn", skipped = "Comment" }
+
+-- gates is results.gate_outcomes: a table keyed by gate name, or nil.
+M._lines = function(findings, gates)
   local b = require("vallow.panel.float").builder()
   local score = findings and findings.health_score
 
@@ -145,13 +149,54 @@ M._lines = function(findings)
     end
   end
 
+  -- Gates (fallow 3.27+): one verdict per gate the run evaluated. Unknown
+  -- gate names and statuses are shown as given.
+  if type(gates) == "table" then
+    local names = {}
+    for name, g in pairs(gates) do
+      if type(g) == "table" then
+        table.insert(names, name)
+      end
+    end
+    table.sort(names)
+    local enforced = false
+    for _, name in ipairs(names) do
+      enforced = enforced or gates[name].enforced ~= false
+    end
+    if #names > 0 then
+      b.push("")
+      b.push(enforced and "  Gates" or "  Gates · not enforced", "VallowSection")
+      for _, name in ipairs(names) do
+        local g = gates[name]
+        local mark = GATE_MARKS[g.status] or "?"
+        local detail = ""
+        if g.status == "fail" or g.status == "warn" then
+          local parts = {}
+          if type(g.observed) == "number" then
+            table.insert(parts, num(g.observed))
+          end
+          if type(g.threshold) == "number" then
+            table.insert(parts, "/ " .. num(g.threshold))
+          end
+          if type(g.threshold_label) == "string" and g.threshold_label ~= "" then
+            table.insert(parts, g.threshold_label)
+          end
+          detail = table.concat(parts, " ")
+        end
+        -- A gate nothing enforces (no --fail-on-issues) is advice, so it is dimmed.
+        local hl = g.enforced == false and "Comment" or GATE_HLS[g.status] or "Comment"
+        b.push(row(mark .. " " .. name, detail), hl)
+      end
+    end
+  end
+
   b.push("")
   return b
 end
 
 M.open = function()
   local results = require("vallow.panel").state.results
-  local b = M._lines(results and results.findings)
+  local b = M._lines(results and results.findings, results and results.gate_outcomes)
   return require("vallow.panel.float").open({ title = "Vallow Health", lines = b.lines, hls = b.hls })
 end
 

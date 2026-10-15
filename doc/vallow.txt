@@ -94,6 +94,14 @@ subsequent opens results are shown instantly from cache.
     trend against the last saved snapshot with a sparkline per metric.
     q or <Esc> closes.
 
+    fallow 3.27 and later report a verdict per gate. A "Gates" block
+    lists each gate with a mark (✓ pass, ✗ fail, ! warn, - skipped). A
+    failing or warning gate also shows the count it measured, its
+    threshold and the threshold label. The block is left out when fallow
+    reports no gates. A gate is enforced only when fallow runs with
+    `--fail-on-issues` (add it to `fallow_args`). Unenforced gates are
+    dimmed, and the heading reads "Gates · not enforced" when none is.
+
     The score comes from `fallow --score`. The trend needs a snapshot:
     run `fallow health --save-snapshot` in the project first, otherwise
     the trend section is left out. If "health" is not in `analyses`, the
