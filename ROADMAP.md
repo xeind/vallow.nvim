@@ -103,6 +103,38 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   formatting and JSONC comments survive, and `.fallowrc.jsonc` is used when
   it exists.
 
+## Batch 6 — done
+
+- **Cursor actions.** `:Vallow action` offers ignore, trace and explain for
+  the finding under the cursor in a source buffer. `:Vallow next` / `prev`
+  jump between vallow diagnostics only. Diagnostics carry their finding in
+  `user_data`.
+- **fallow 3.24–3.31 fixes.** The fix preview no longer counts skipped
+  fixes. Only notices with `degrades_analysis` are shown. The runner reads
+  `dev_dependencies_in_production` and the boundary violation fields
+  `from_path`, `from_zone`, `to_zone`, `import_specifier`.
+- **New categories.** Package Cycles and Deprecated In Use, in ISSUES and
+  as diagnostics.
+- **Severity.** fallow's `effective_severity` "warn" caps the default
+  diagnostic severity at warn. A severity set in config still wins.
+- **checkhealth.** `:checkhealth vallow` runs `fallow doctor` (3.23+).
+- **Panel state.** Filter, audit flag and cursor row survive a reopen.
+  `follow_buffer = true` filters the panel to the file you enter.
+- **CI removed.** The GitHub Action tested against `fallow@latest`, so
+  each fallow release could fail it with no change here. `make test` and
+  `make lint` run locally.
+
+## Batch 7 — open
+
+- **Unused-file cascade.** fallow 3.33 hides findings inside unused files.
+  Decide: pass `--show-cascade`, or show the hidden count in the header.
+- **Stable finding ids.** Key the cache and diagnostics on `finding_id`.
+  Raises the minimum to fallow 3.31.
+- **Importer counts.** Dim `N importers` virtual text on exports, from
+  `fallow inspect`.
+- **Introduced-only diagnostics.** An option to show diagnostics only for
+  findings the branch introduced, from audit mode's `introduced` flag.
+
 ## Conventions
 
 - stylua on every touched line. Match existing style.
