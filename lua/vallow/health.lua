@@ -65,7 +65,8 @@ function M.check()
   local install = require("vallow.install")
   local cmd, source = runner.resolve_cmd(root)
   if cmd then
-    local version = vim.fn.system(vim.fn.shellescape(cmd) .. " --version 2>&1"):gsub("\n", "")
+    -- First line only: mise shims print a "verified: ..." line after the version.
+    local version = vim.split(vim.fn.system(vim.fn.shellescape(cmd) .. " --version 2>&1"), "\n")[1]
     local found = ("fallow: %s (%s: %s)"):format(version, source, cmd)
     local major, minor, patch = version:match("(%d+)%.(%d+)%.(%d+)")
     local want = { install.MIN_VERSION:match("(%d+)%.(%d+)%.(%d+)") }
@@ -113,7 +114,7 @@ function M.check()
   -- fallow-lsp (optional, for LSP integration)
   local lsp = vim.fn.executable("fallow-lsp") == 1 and "fallow-lsp" or install.path("fallow-lsp")
   if vim.fn.executable(lsp) == 1 then
-    local v = vim.fn.system(vim.fn.shellescape(lsp) .. " --version 2>&1"):gsub("\n", "")
+    local v = vim.split(vim.fn.system(vim.fn.shellescape(lsp) .. " --version 2>&1"), "\n")[1]
     vim.health.ok(("fallow-lsp: %s (LSP diagnostics + code actions available)"):format(v))
   else
     vim.health.ok("fallow-lsp not found — run :VallowInstall lsp to enable LSP integration (optional)")
