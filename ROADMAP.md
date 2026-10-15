@@ -154,6 +154,24 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   Package Cycles and Boundary Violations; a 3.x block with the arrays
   starts no architecture job.
 
+## Batch 9 — done
+
+- **Path trace.** `gt` on a boundary violation runs `fallow trace --path`
+  from the importing file to `to_path`, so a barrel in between shows as a
+  hop. `:Vallow path {file}` traces from the current buffer. Needs fallow
+  3.24+. Circular deps keep the K cycle chain: a trace adds nothing there.
+- **Incomplete analysis.** Findings with `reachability_caveats` get a dim
+  `?` in the panel gutter, " (incomplete analysis)" on the diagnostic, and
+  the caveat in the K float.
+
+## Batch 10 — open
+
+- **Stack trace to quickfix.** `fallow trace-error` (3.24) maps a pasted
+  stack trace to source locations.
+- **Current-buffer health.** `fallow health <path>` (3.25) for one file.
+- **Gate results.** `gate_outcomes` (3.29) pass/fail in the dashboard.
+- **Feature flags.** `fallow flags --retirement` (3.30) as a panel section.
+
 ## Deferred
 
 - **Stable finding ids.** Nothing in vallow needs `finding_id` yet, and
