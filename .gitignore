@@ -6,3 +6,6 @@
 /doc/tags
 node_modules
 docs/
+.DS_Store
+.claude/worktrees/
+.claude/settings.local.json
