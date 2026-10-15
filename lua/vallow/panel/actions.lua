@@ -190,6 +190,9 @@ end
 
 -- True when gt has something to trace for this finding.
 M.traceable = function(item, cat)
+  if cat == "boundary_violations" then
+    return (item.relative_path or "") ~= "" and (item.to_path or "") ~= ""
+  end
   local name = item.name or ""
   if name == "" then
     return false
@@ -201,7 +204,9 @@ end
 M.trace_item = function(item, cat)
   local trace = require("vallow.trace")
   if not M.traceable(item, cat) then
-    vim.notify("vallow: trace works on unused exports and dependencies", vim.log.levels.INFO)
+    vim.notify("vallow: trace works on unused exports, dependencies and boundary violations", vim.log.levels.INFO)
+  elseif cat == "boundary_violations" then
+    trace.path(item.relative_path, item.to_path)
   elseif EXPORT_CATEGORIES[cat] then
     trace.export(item.relative_path, item.name)
   else

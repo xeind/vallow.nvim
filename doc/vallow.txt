@@ -148,11 +148,21 @@ subsequent opens results are shown instantly from cache.
 :Vallow action
     Act on the vallow finding under the cursor in a source buffer, without
     the panel: a |vim.ui.select| menu offers Ignore (as x in the panel),
-    Trace (as gt, for unused exports and dependencies) and Explain (as ge).
+    Trace (as gt, for unused exports, dependencies and boundary
+    violations) and Explain (as ge).
     With several findings on the line, each entry names its finding.
     It reads the findings from vallow's diagnostics, so it needs
     `diagnostics.enabled` and finds nothing while the fallow LSP owns the
     buffer.
+
+                                                          *:Vallow-path*
+:Vallow path {file}
+    Show the shortest chain of imports from the current buffer to {file}
+    (`fallow trace --path <from> <to>`, fallow 3.24 or newer). {file}
+    completes as a file name. The float lists one line per hop with the
+    import line and a type-only mark; <CR> jumps to the import. An
+    unreachable pair shows fallow's reason. Both files must lie inside the
+    project root. With an older fallow, vallow notifies and does nothing.
 
                                                             *:Vallow-next*
 :Vallow next
@@ -282,7 +292,10 @@ ACTIONS ~
             runs `fallow dead-code --trace <file>:<name>`; on a dependency
             it runs `--trace-dependency <name>`. The evidence — direct
             references, re-export chains, importers — is drawn as a tree.
-            <CR> on a path line jumps to it.
+            <CR> on a path line jumps to it. On a boundary violation it
+            runs `fallow trace --path <from> <to>` (fallow 3.24+) and
+            lists the import hops, so a barrel between the two files
+            shows up. See |:Vallow-path|.
   d         On a clone group, or on one of its instance rows, open the
             two largest instances in a new tab as two vertical windows
             with |:diffthis| on both, each at the start of its own

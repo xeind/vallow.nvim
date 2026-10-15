@@ -42,7 +42,7 @@ local SECTIONS = {
       { key = "gi", desc = "inspect file in float" },
       { key = "x", desc = "ignore finding" },
       { key = "ge", desc = "explain this issue type" },
-      { key = "gt", desc = "trace export / dependency" },
+      { key = "gt", desc = "trace export / dependency / boundary" },
       { key = "d", desc = "diff two clone instances" },
       { key = "D", desc = "health dashboard" },
       { key = "X", desc = "preview and apply fallow fix" },

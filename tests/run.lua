@@ -1640,6 +1640,67 @@ table.insert(steps, function(next_step)
   end)
 end)
 
+-- 34. Path trace: JSON-to-tree mapping, boundary dispatch, version gate, and a real trace.
+table.insert(steps, function(next_step)
+  local trace = require("vallow.trace")
+  local actions = require("vallow.panel.actions")
+  local runner = require("vallow.runner")
+  local root = runner.find_root()
+
+  trace._show_path({
+    from = "src/ui.ts",
+    to = "src/db/b.ts",
+    reachable = true,
+    hops = 2,
+    path = {
+      { from = "src/ui.ts", to = "src/barrel.ts", type_only = false, import_line = 3 },
+      { from = "src/barrel.ts", to = "src/db/b.ts", type_only = true, import_line = 1 },
+    },
+    reason = "src/ui.ts reaches src/db/b.ts in 2 hops",
+  }, root)
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  ok("path: head", has_line(lines, "  src/ui%.ts$"), vim.inspect(lines))
+  ok("path: first hop", has_line(lines, "├─ src/barrel%.ts  ·  line 3"), vim.inspect(lines))
+  ok("path: type-only last hop", has_line(lines, "└─ src/db/b%.ts  ·  line 1 · type%-only"), vim.inspect(lines))
+  ok("path: reason", has_line(lines, "reaches src/db/b%.ts in 2 hops"), vim.inspect(lines))
+  vim.api.nvim_win_close(0, true)
+
+  trace._show_path({ from = "a.ts", to = "b.ts", reachable = false, hops = 0, path = {}, reason = "no import path from a.ts to b.ts" }, root)
+  lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  ok("path: unreachable reason", has_line(lines, "└─ no import path from a%.ts to b%.ts"), vim.inspect(lines))
+  vim.api.nvim_win_close(0, true)
+  trace._show_path({}, root)
+  vim.api.nvim_win_close(0, true)
+
+  eq("path: boundary is traceable", actions.traceable({ relative_path = "src/a.ts", to_path = "src/b.ts" }, "boundary_violations"), true)
+  eq("path: boundary without to_path", actions.traceable({ relative_path = "src/a.ts" }, "boundary_violations"), false)
+
+  local panel = require("vallow.panel")
+  local saved_results, saved_notify = panel.state.results, vim.notify
+  local notified
+  vim.notify = function(msg)
+    notified = msg
+  end
+  panel.state.results = { version = "3.23.0" }
+  trace.path("src/index.ts", "src/a.ts")
+  vim.notify = saved_notify
+  panel.state.results = saved_results
+  ok("path: older fallow notifies", notified and notified:find("3.24", 1, true) ~= nil, tostring(notified))
+
+  local bin = runner.resolve_cmd(root)
+  runner._job({ bin, "trace", "--path", "src/index.ts", "src/a.ts", "--format", "json", "--quiet" }, root, function(job_ok, data)
+    vim.schedule(function()
+      ok("path: real envelope", job_ok and data and data.reachable == true, vim.inspect(data))
+      trace._show_path(data, root)
+      local real = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      ok("path: real from", has_line(real, "src/index%.ts"), vim.inspect(real))
+      ok("path: real hop", has_line(real, "└─ src/a%.ts"), vim.inspect(real))
+      vim.api.nvim_win_close(0, true)
+      next_step()
+    end)
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

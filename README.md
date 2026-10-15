@@ -80,6 +80,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow production` | Toggle production mode (test/dev files excluded) and re-run |
 | `:Vallow watch` | Toggle watch mode: one `fallow watch` process streams results on every file change |
 | `:Vallow action` | Ignore, trace or explain the finding under the cursor in a source buffer |
+| `:Vallow path {file}` | Trace the shortest import path from the current buffer to `{file}` (fallow 3.24+). `gt` on a boundary violation traces its two files the same way |
 | `:Vallow next` / `:Vallow prev` | Jump to the next / previous vallow diagnostic, skipping LSP and linters |
 | `:Vallow fix` | Preview `fallow fix --dry-run`, apply it after a confirm |
 | `:Vallow refresh` | Re-run fallow and refresh |
@@ -115,7 +116,7 @@ All remappable via `setup({ keymaps = ... })`.
 | `gi` | Inspect the file on this row |
 | `x` | Ignore this finding: `.fallowrc.json`/`.fallowrc.jsonc` entry or suppression comment |
 | `ge` | Explain this issue type (`fallow explain`) |
-| `gt` | Trace an unused export or dependency |
+| `gt` | Trace an unused export, a dependency, or a boundary violation (import path) |
 | `d` | Diff the two largest instances of a clone group |
 | `D` | Health dashboard float |
 | `X` | Preview the fixes fallow would make, apply them after a confirm |

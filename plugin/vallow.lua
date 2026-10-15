@@ -19,7 +19,8 @@ local function search()
 end
 
 -- :Vallow arguments: the section keys from config, plus these verbs.
-local verbs = { "action", "audit", "dashboard", "fix", "next", "prev", "production", "refresh", "search", "watch" }
+local verbs =
+  { "action", "audit", "dashboard", "fix", "next", "path", "prev", "production", "refresh", "search", "watch" }
 
 local function candidates()
   local list = vim.deepcopy(verbs)
@@ -43,6 +44,8 @@ vim.api.nvim_create_user_command("Vallow", function(opts)
     end
   elseif verb == "audit" then
     require("vallow.panel").audit(rest)
+  elseif verb == "path" then
+    require("vallow.trace").between_files(rest)
   elseif arg == "action" then
     require("vallow.cursor").action()
   elseif arg == "next" then
@@ -68,7 +71,11 @@ vim.api.nvim_create_user_command("Vallow", function(opts)
   end
 end, {
   nargs = "*",
-  complete = function(lead)
+  complete = function(lead, line)
+    local file_lead = line:match("^%s*%S+%s+path%s+(.*)$")
+    if file_lead then
+      return vim.fn.getcompletion(file_lead, "file")
+    end
     return vim.tbl_filter(function(c)
       return c:find(lead, 1, true) == 1
     end, candidates())
