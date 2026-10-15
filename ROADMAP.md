@@ -130,6 +130,30 @@ by the headless test harness before it lands. fallow 3.22+ is the target.
   and reports `cascade_hidden`. The panel header shows the count. vallow
   does not pass `--show-cascade`: deleting the file removes those findings.
 
+## Batch 8 — fallow v4 (planned)
+
+- **Trigger.** fallow 3.33 moves cycles and boundaries to `fallow
+  architecture` (`kind: "architecture"`, `schema_version` 1). `dead-code`
+  and combined runs keep these arrays, unmarked, "until the next major
+  version". Start when the v4 notes or `output-contract.d.ts` drop them
+  from `CheckOutput`.
+- **Fields.** No field is renamed: `circular_dependencies`,
+  `package_cycles` and `boundary_violations` (vallow's three) move from
+  `check.*` (combined) or the top level (`dead-code`) to the top level of
+  the architecture envelope. The item shapes do not change.
+- **Runner.** `M.run` and `_run_separate` start `fallow architecture
+  --format json --quiet` when the dead-code block has no
+  `circular_dependencies` (always present in 3.x). `_normalize` reads the
+  three arrays from that envelope when it is given, else from `check`.
+  Watch output carries the last full run's arrays, as it does for dupes.
+- **Cost.** fallow 3.x spawns no extra process. On v4 each run costs one
+  more process and a second module-graph pass; remember the decision per
+  root so only the first run waits for both in sequence.
+- **Tests.** Hand-built tables through `_normalize`: a dead-code block
+  without the arrays plus an architecture envelope fills Circular Deps,
+  Package Cycles and Boundary Violations; a 3.x block with the arrays
+  starts no architecture job.
+
 ## Deferred
 
 - **Stable finding ids.** Nothing in vallow needs `finding_id` yet, and
