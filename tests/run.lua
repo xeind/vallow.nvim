@@ -56,9 +56,16 @@ table.insert(steps, function(next_step)
     eq("combined: unused_deps", count(results, "unused_deps"), 1)
     eq("combined: unresolved_imports", count(results, "unresolved_imports"), 1)
     ok("combined: version", (results.version or ""):match("^3%.%d+%.") ~= nil, tostring(results.version))
-    -- skipped-source-dotdir (.claude) and node-modules-missing; the two
+    -- Degrading notices (node-modules-missing, plus one skipped-source-dotdir
+    -- per hidden source directory, which varies by checkout) are kept; the
     -- *-not-configured entries do not degrade analysis and are dropped.
-    eq("combined: notices", #(results.notices or {}), 2)
+    local notice_text = table.concat(results.notices or {}, "\n")
+    ok("combined: notice node_modules", notice_text:find("node_modules", 1, true) ~= nil, notice_text)
+    ok(
+      "combined: notices drop not-configured",
+      not notice_text:find("No architecture boundaries", 1, true) and not notice_text:find("No rule packs", 1, true),
+      notice_text
+    )
     ok(
       "combined: repo_root",
       vim.fn.fnamemodify(results.repo_root or "", ":p"):find("tests/fixture", 1, true) ~= nil,
