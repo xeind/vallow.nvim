@@ -1451,7 +1451,19 @@ table.insert(steps, function(next_step)
       {
         packages = { "@r/a", "@r/b" },
         package_roots = { "packages/a", "packages/b" },
-        edges = { { path = "packages/a/src/i.ts", line = 4, col = 2, type_only = true }, {} },
+        length = 2,
+        edges = {
+          {
+            from_package = "@r/a",
+            to_package = "@r/b",
+            path = "packages/a/src/i.ts",
+            target_path = "packages/b/src/j.ts",
+            line = 4,
+            col = 2,
+            type_only = true,
+          },
+          {},
+        },
         group_truncated = true,
       },
       {},

@@ -603,11 +603,11 @@ M._normalize = function(raw, root)
 
   -- package_cycles[] (v3.31+): cycles between workspace packages.
   -- { packages: [name...], package_roots: [dir...], edges: [one example import per hop],
-  --   group_truncated }. Edge field names are not in the 3.29 contract, so read them loosely.
+  --   group_truncated }. Edge: { from_package, to_package, path, target_path, line, col, type_only }.
   for _, v in ipairs(check.package_cycles or {}) do
     local edges = {}
     for _, e in ipairs(v.edges or {}) do
-      local ep = e.path or e.from_path or e.file or ""
+      local ep = e.path or ""
       table.insert(edges, {
         path = abs(ep),
         relative_path = rel(abs(ep)),
