@@ -395,8 +395,26 @@ M._normalize = function(raw, root)
     return root .. "/" .. p
   end
 
+  -- v3.24+: a finding computed over an incomplete import graph carries
+  -- reachability_caveats[] (e.g. "incomplete-import-graph"). The set is open, so
+  -- any value counts. Returns low_confidence = true and a short text, or nils.
+  local function caveat_fields(item)
+    local list = item.reachability_caveats
+    if type(list) ~= "table" or #list == 0 then
+      return nil, nil
+    end
+    local names = {}
+    for _, c in ipairs(list) do
+      if type(c) == "string" then
+        table.insert(names, (c:gsub("%-", " ")))
+      end
+    end
+    return true, #names > 0 and table.concat(names, ", ") or "incomplete analysis"
+  end
+
   -- unused_exports[], unused_types[], unused_enum_members[], unused_class_members[]
   local function push_export(item, default_kind)
+    local low_confidence, caveat = caveat_fields(item)
     local name = item.export_name or item.exportName or item.member_name or item.memberName or item.name or ""
     local kind = default_kind
     if item.kind == "unused-type" or item.isTypeOnly or item.is_type_only then
@@ -416,6 +434,8 @@ M._normalize = function(raw, root)
       actions = item.actions,
       introduced = item.introduced,
       effective_severity = item.effective_severity,
+      low_confidence = low_confidence,
+      caveat = caveat,
     })
   end
   for _, v in ipairs(check.unused_exports or {}) do
@@ -437,16 +457,20 @@ M._normalize = function(raw, root)
 
   -- unused_files[]
   for _, v in ipairs(check.unused_files or {}) do
+    local low_confidence, caveat = caveat_fields(v)
     table.insert(findings.unused_files.items, {
       path = v.path or "",
       relative_path = rel(v.path),
       introduced = v.introduced,
+      low_confidence = low_confidence,
+      caveat = caveat,
     })
   end
   findings.unused_files.count = #findings.unused_files.items
 
   -- unused_dependencies[], unused_dev_dependencies[], unused_optional_dependencies[]
   local function push_dep(item, bucket)
+    local low_confidence, caveat = caveat_fields(item)
     table.insert(bucket.items, {
       name = item.package_name or item.packageName or item.package or "",
       path = abs(item.path or ""),
@@ -454,6 +478,8 @@ M._normalize = function(raw, root)
       lnum = item.line or 1,
       used_in_workspaces = item.used_in_workspaces,
       introduced = item.introduced,
+      low_confidence = low_confidence,
+      caveat = caveat,
     })
   end
   for _, v in ipairs(check.unused_dependencies or {}) do

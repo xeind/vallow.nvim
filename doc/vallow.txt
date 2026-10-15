@@ -317,6 +317,17 @@ that is itself unused, and reports the count as `cascade_hidden`. The panel
 header then shows "N findings hidden in unused files". Nothing shows when
 the count is zero or fallow is older. vallow does not pass `--show-cascade`.
 
+INCOMPLETE ANALYSIS ~
+
+fallow 3.24 and later adds `reachability_caveats` to a dead-code finding
+(unused file, export, type, member, or dependency) when the run did not read
+or parse every file. A skipped file may hold the import that keeps the code
+alive. vallow sets `low_confidence = true` and a short `caveat` text on the
+item. The panel puts a dim `?` in the gutter before the row; the `?` help
+float lists it. Diagnostics append " (incomplete analysis)" to the message.
+Severity does not change. `fallow fix` skips these findings, so check them
+by hand.
+
 ==============================================================================
 6. CONFIGURATION                                          *vallow-config*
 

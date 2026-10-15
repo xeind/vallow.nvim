@@ -1558,6 +1558,88 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 35. reachability_caveats: normalizer sets low_confidence + caveat, panel row gets a ?,
+-- diagnostics get a suffix with severity unchanged, and the real fixture run stays consistent.
+table.insert(steps, function(next_step)
+  local runner = require("vallow.runner")
+  local root = vim.fn.getcwd()
+  local raw = {
+    unused_exports = {
+      { path = "src/a.ts", export_name = "gone", line = 3, reachability_caveats = { "incomplete-import-graph" } },
+      { path = "src/a.ts", export_name = "plain", line = 5 },
+      { path = "src/a.ts", export_name = "empty", line = 6, reachability_caveats = {} },
+    },
+    unused_files = { { path = "src/dead.ts", reachability_caveats = { "incomplete-file-analysis", "future-kind" } } },
+    unused_dependencies = { { package_name = "lodash", path = "package.json", line = 7, reachability_caveats = { "incomplete-import-graph" } } },
+  }
+  local f = runner._normalize(raw, root).findings
+  local marked, plain, empty = f.unused_exports.items[1], f.unused_exports.items[2], f.unused_exports.items[3]
+  eq("caveat: export marked", marked.low_confidence, true)
+  eq("caveat: export text", marked.caveat, "incomplete import graph")
+  eq("caveat: absent is nil", plain.low_confidence, nil)
+  eq("caveat: absent text is nil", plain.caveat, nil)
+  eq("caveat: empty list is nil", empty.low_confidence, nil)
+  eq("caveat: file marked", f.unused_files.items[1].low_confidence, true)
+  eq("caveat: file text joins values", f.unused_files.items[1].caveat, "incomplete file analysis, future kind")
+  eq("caveat: dependency marked", f.unused_deps.items[1].low_confidence, true)
+
+  -- Panel: marked rows get a ? gutter marker, others do not.
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.b[buf].vallow_open_cats = { unused_exports = true }
+  require("vallow.panel.render").render(buf, { repo_root = root, version = "x", duration_ms = 1, findings = f }, nil)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local function row(name)
+    for _, l in ipairs(lines) do
+      if l:find(name, 1, true) and l:find("src/a.ts", 1, true) then
+        return l
+      end
+    end
+  end
+  ok("caveat: panel row has ?", (row("gone") or ""):sub(1, 6) == "    ? ", vim.inspect(lines))
+  ok("caveat: panel row without caveat has no ?", (row("plain") or ""):sub(1, 6) == "      ", vim.inspect(lines))
+  require("vallow.panel.render").clear(buf)
+  vim.api.nvim_buf_delete(buf, { force = true })
+
+  -- Diagnostics: suffix on the message, severity unchanged.
+  require("vallow").setup({})
+  local diag = require("vallow.diagnostics")
+  vim.cmd("edit " .. vim.fn.fnameescape(marked.path))
+  local dbuf = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_set_lines(dbuf, 0, -1, false, { "a", "b", "c", "d", "e", "f" })
+  diag.apply(f)
+  local diags = vim.diagnostic.get(dbuf, { namespace = diag.ns })
+  local by_line = {}
+  for _, d in ipairs(diags) do
+    by_line[d.lnum] = d
+  end
+  ok("caveat: diagnostic suffix", by_line[2] and by_line[2].message:find(" (incomplete analysis)", 1, true) ~= nil, vim.inspect(diags))
+  ok("caveat: no suffix without caveat", by_line[4] and by_line[4].message:find("incomplete", 1, true) == nil, vim.inspect(diags))
+  eq("caveat: severity unchanged", by_line[2] and by_line[2].severity, by_line[4] and by_line[4].severity)
+  vim.cmd("bwipeout! " .. dbuf)
+
+  -- Real fixture: whatever fallow marks must map to a flag and a text, and nothing else may.
+  runner.run(function(results)
+    local seen = 0
+    for _, key in ipairs({ "unused_exports", "unused_types", "unused_deps", "unused_files" }) do
+      for _, item in ipairs(results.findings[key].items) do
+        eq("caveat: real " .. key .. " flag matches text", item.low_confidence == true, type(item.caveat) == "string")
+        if item.low_confidence then
+          seen = seen + 1
+          ok("caveat: real text", item.caveat:find("incomplete", 1, true) ~= nil, item.caveat)
+        end
+      end
+    end
+    local detail = require("vallow.panel.actions")._detail_lines({
+      relative_path = "src/a.ts",
+      low_confidence = true,
+      caveat = "incomplete import graph",
+    })
+    ok("caveat: detail float line", has_line(detail, "incomplete analysis: incomplete import graph"), vim.inspect(detail))
+    print("caveat: fixture findings with a caveat: " .. seen)
+    next_step()
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

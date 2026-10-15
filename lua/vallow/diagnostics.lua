@@ -84,6 +84,14 @@ local function severity_for(cat_key, dcfg, item)
   return default
 end
 
+-- Append " (incomplete analysis)" when fallow flagged the finding's run as incomplete.
+M._with_caveat = function(message, item)
+  if item and item.low_confidence == true then
+    return message .. " (incomplete analysis)"
+  end
+  return message
+end
+
 -- Virtual text is a namespace option, so it applies to our diagnostics only.
 local function apply_ns_opts(dcfg)
   vim.diagnostic.config({ virtual_text = dcfg.virtual_text ~= false }, ns)
@@ -160,6 +168,7 @@ M.apply = function(findings)
     if not path or path == "" then
       return
     end
+    message = M._with_caveat(message, item)
     if not diags_by_path[path] then
       diags_by_path[path] = {}
     end
@@ -268,7 +277,7 @@ M.apply_buf = function(bufnr, findings)
           table.insert(diags, {
             lnum = math.max(0, (item.lnum or 1) - 1),
             col = item.col or 0,
-            message = msg,
+            message = M._with_caveat(msg, item),
             severity = severity_for(cat_key, dcfg, item),
             source = "fallow",
             user_data = { vallow = { category = cat_key, item = item } },
@@ -288,7 +297,7 @@ M.apply_buf = function(bufnr, findings)
           table.insert(diags, {
             lnum = math.max(0, (item.lnum or 1) - 1),
             col = 0,
-            message = lbl .. ": " .. (item.name or ""),
+            message = M._with_caveat(lbl .. ": " .. (item.name or ""), item),
             severity = sev,
             source = "fallow",
             user_data = { vallow = { category = cat_key, item = item } },

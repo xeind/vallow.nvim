@@ -890,6 +890,9 @@ M._detail_lines = function(item)
   if item.introduced and item.introduced ~= vim.NIL and item.introduced ~= "" then
     push("  since: " .. tostring(item.introduced), "VallowKind")
   end
+  if item.low_confidence then
+    push("  incomplete analysis: " .. (item.caveat or "?"), "VallowKind")
+  end
 
   -- Circular dependencies: one line per hop, ending back at the first file.
   if item.edges and #item.edges > 1 then

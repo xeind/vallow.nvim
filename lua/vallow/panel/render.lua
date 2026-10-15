@@ -278,12 +278,21 @@ M.render = function(buf, results, win)
     end
   end
 
-  -- Audit mode: mark rows the changeset introduced with a + in the gutter.
-  if results.audit then
-    for lnum, item in pairs(line_map) do
-      if type(item) == "table" and item.introduced == true and (lines[lnum] or ""):sub(1, 6) == "      " then
-        lines[lnum] = "    + " .. lines[lnum]:sub(7)
+  -- Gutter markers (columns 5 and 6 of the indent): `+` for a finding the audit
+  -- changeset introduced, `?` for a finding fallow computed from an incomplete run.
+  for lnum, item in pairs(line_map) do
+    if type(item) == "table" and (lines[lnum] or ""):sub(1, 6) == "      " then
+      local intro = results.audit ~= nil and item.introduced == true
+      local low = item.low_confidence == true
+      if intro then
+        lines[lnum] = "    +" .. (low and "?" or " ") .. lines[lnum]:sub(7)
         table.insert(hl_queue, { lnum - 1, 4, 5, "VallowSevWarn" })
+        if low then
+          table.insert(hl_queue, { lnum - 1, 5, 6, "VallowKind" })
+        end
+      elseif low then
+        lines[lnum] = "    ? " .. lines[lnum]:sub(7)
+        table.insert(hl_queue, { lnum - 1, 4, 5, "VallowKind" })
       end
     end
   end

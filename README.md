@@ -149,6 +149,13 @@ fallow 3.33 and later hides unused exports, types, and members inside a file
 that is itself unused. The panel header shows a dim "N findings hidden in
 unused files" line with the count. Delete the file and the findings go too.
 
+fallow 3.24 and later marks a dead-code finding with `reachability_caveats`
+when it could not read or parse every file. A file it skipped may hold the
+import that keeps the code alive. The panel shows a dim `?` before the row
+(the `?` help float lists it), and the diagnostic message ends with
+" (incomplete analysis)". Severity does not change. Check the finding by hand
+before you delete anything; `fallow fix` skips it too.
+
 ## Configuration
 
 ```lua

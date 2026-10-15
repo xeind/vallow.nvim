@@ -54,6 +54,13 @@ local SECTIONS = {
       { key = "?", desc = "this help" },
     },
   },
+  {
+    title = "Markers",
+    keys = {
+      { key = "+", desc = "audit: introduced by the change" },
+      { key = "?", desc = "incomplete analysis: verify by hand" },
+    },
+  },
 }
 
 M.open = function()
