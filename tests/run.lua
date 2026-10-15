@@ -1735,6 +1735,67 @@ table.insert(steps, function(next_step)
   next_step()
 end)
 
+-- 36. stacktrace: trace-error JSON -> quickfix items, plus one real run.
+table.insert(steps, function(next_step)
+  local stacktrace = require("vallow.stacktrace")
+  local runner = require("vallow.runner")
+  local root = runner.find_root()
+  local items = stacktrace._items({
+    frames = {
+      { raw = "at a (src/a.ts:4:10)", ["function"] = "a", file = "src/a.ts", line = 4, column = 10, resolution = "resolved" },
+      { raw = "at b (/abs/b.ts:2:1)", ["function"] = "b", file = "/abs/b.ts", line = 2, column = 1, resolution = "ambiguous" },
+      { raw = "at (src/c.ts:7:5)", file = "src/c.ts", line = 7, column = 5, resolution = "resolved" },
+      { raw = "at d (src/d.ts:1:1)", ["function"] = "d", file = "src/d.ts", line = 1, column = 1, resolution = "not_found" },
+      { raw = "at e (node:fs:1:1)", ["function"] = "e", file = "node:fs", line = 1, column = 1, resolution = "not_attempted" },
+      { raw = "at f", ["function"] = "f", resolution = "resolved" },
+      "junk",
+    },
+  }, "/proj")
+  eq("stacktrace: resolved and ambiguous only", #items, 3)
+  eq("stacktrace: relative file joins root", items[1].filename, "/proj/src/a.ts")
+  eq("stacktrace: line", items[1].lnum, 4)
+  eq("stacktrace: column", items[1].col, 10)
+  eq("stacktrace: text is function name", items[1].text, "a")
+  eq("stacktrace: absolute file kept", items[2].filename, "/abs/b.ts")
+  eq("stacktrace: ambiguous is marked", items[2].text, "b (ambiguous)")
+  eq("stacktrace: text falls back to raw frame", items[3].text, "at (src/c.ts:7:5)")
+  eq("stacktrace: bad input yields nothing", #stacktrace._items(nil, "/proj"), 0)
+
+  local saved_notify = vim.notify
+  local notified
+  vim.notify = function(msg)
+    notified = msg
+  end
+  stacktrace._fill({ frames = {} }, "/proj")
+  ok("stacktrace: nothing resolved notifies", notified and notified:find("no stack frame", 1, true) ~= nil, tostring(notified))
+  local panel = require("vallow.panel")
+  local saved_results = panel.state.results
+  panel.state.results = { version = "3.23.0" }
+  notified = nil
+  stacktrace.trace("at a (src/a.ts:4:10)")
+  panel.state.results = saved_results
+  ok("stacktrace: older fallow notifies", notified and notified:find("3.24", 1, true) ~= nil, tostring(notified))
+  vim.notify = saved_notify
+
+  local bin = runner.resolve_cmd(root)
+  local file = vim.fn.tempname()
+  vim.fn.writefile({ "Error: boom", "    at usedFn (src/a.ts:4:10)" }, file)
+  runner._job({ bin, "trace-error", file, "--format", "json", "--quiet" }, root, function(job_ok, data)
+    vim.schedule(function()
+      os.remove(file)
+      ok("stacktrace: real envelope", job_ok and type(data) == "table" and data.kind == "trace-error", vim.inspect(data))
+      local real = stacktrace._items(data, root)
+      ok("stacktrace: real frame resolves", #real >= 1 and real[1].filename == root .. "/src/a.ts" and real[1].text == "usedFn", vim.inspect(real))
+      stacktrace._fill(data, root)
+      local qf = vim.fn.getqflist({ title = 1, items = 1 })
+      eq("stacktrace: quickfix title", qf.title, "vallow stacktrace")
+      ok("stacktrace: quickfix entry", #qf.items >= 1 and qf.items[1].lnum == 4, vim.inspect(qf.items))
+      vim.cmd("cclose")
+      next_step()
+    end)
+  end)
+end)
+
 local done = false
 local function run_step(i)
   if i > #steps then

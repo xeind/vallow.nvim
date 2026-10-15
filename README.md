@@ -81,6 +81,7 @@ require("vallow").setup({ fallow_cmd = "./node_modules/.bin/fallow" })
 | `:Vallow watch` | Toggle watch mode: one `fallow watch` process streams results on every file change |
 | `:Vallow action` | Ignore, trace or explain the finding under the cursor in a source buffer |
 | `:Vallow path {file}` | Trace the shortest import path from the current buffer to `{file}` (fallow 3.24+). `gt` on a boundary violation traces its two files the same way |
+| `:Vallow stacktrace` | Map a stack trace to source: the visual range (`:'<,'>Vallow stacktrace`), else the `+` register, fills the quickfix list with one entry per frame fallow resolves (fallow 3.24+) |
 | `:Vallow next` / `:Vallow prev` | Jump to the next / previous vallow diagnostic, skipping LSP and linters |
 | `:Vallow fix` | Preview `fallow fix --dry-run`, apply it after a confirm |
 | `:Vallow refresh` | Re-run fallow and refresh |

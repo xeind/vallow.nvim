@@ -172,6 +172,20 @@ subsequent opens results are shown instantly from cache.
     unreachable pair shows fallow's reason. Both files must lie inside the
     project root. With an older fallow, vallow notifies and does nothing.
 
+                                                      *:Vallow-stacktrace*
+:Vallow stacktrace
+:'<,'>Vallow stacktrace
+    Map a V8 or SpiderMonkey stack trace to project source
+    (`fallow trace-error`, fallow 3.24 or newer). With a range, vallow
+    reads those lines. Without one, it reads the `+` register, then the
+    unnamed register. It fills the quickfix list (title "vallow
+    stacktrace") with one entry per frame that fallow resolves or finds
+    ambiguous, at the line and column the frame names, and opens it.
+    Frames outside the project, in dependencies, or without a match are
+    skipped, since they name no file to open. When no frame resolves,
+    vallow notifies. With an older fallow, vallow notifies and does
+    nothing.
+
                                                             *:Vallow-next*
 :Vallow next
 :Vallow prev
